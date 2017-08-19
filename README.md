@@ -1,65 +1,100 @@
-Baseball GDT Bot by Matt Bullock
+Baseball Game Thread Bot for Reddit by Todd Roberts
 =====================================
+https://github.com/toddrob99/Baseball-GDT-Bot
 
-### Current Version: 3.0.2
+Forked from Baseball GDT Bot by Matt Bullock
+https://github.com/mattabullock/Baseball-GDT-Bot
+
+### Current Version: 4.0.0
 	
-The point of this project is to create a bot that will generate a
-	game discussion thread that contains live linescore and boxscore,
-	post it in the correct subreddit for that team, and keep it
-	updated throughout the game.
-	
-Version 1.0 was written in a mix of Python and Java, and has been
-	completely ported to Python for v2.0 and v3.0 (this version).
+This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
 ---
 
-### Set Up OAuth
+### Setup and Configuration
 
-Go to reddit.com’s app page, click on the “are you a developer? create an app” button. Fill out the name, description and about url. Name must be filled out, but the rest doesn’t. Write whatever you please. For redirect uri set it to `http://127.0.0.1:65010/authorize_callback`. All four variables can be changed later.
+#### OAuth Setup
 
-Next, open setup.py, fill in the client_id, client_secret and redirect_uri fields and run the script. Your browser will open. Click allow on the displayed web page. 
+Go to reddit.com’s app page (https://www.reddit.com/prefs/apps), click on the “are you a developer? create an app” button. Fill out the name, description and about url. Name must be filled out, but the rest doesn’t matter. Write whatever you please. For redirect uri set it to `http://localhost:8080`. All four variables can be changed later.
 
-Enter the uniqueKey&code from the URL into the console -- wrapped in single quotes -- and the access information will be printed. This includes the final bit of info you need, the refresh token.
+Next, open setup.py, fill in the `client_id`, `client_secret` and `redirect_uri` fields from your Reddit app and run the script. Your browser will open. Make sure you are logged in to Reddit as the user you want the bot to run as, and click allow on the displayed web page. 
 
-Finally, Copy sample_settings.json to the src folder and rename it to settings.json. Fill in the CLIENT_ID, CLIENT_SECRET, REDIRECT_URI and REFRESH_TOKEN fields in the settings.json file and save. 
+Enter the code (everything after code=) from the URL in the browser address bar into the console and your refresh token will be displayed. Copy the refresh token for the next step.
 
-### Configuration
+Finally, copy `sample_settings.json` to the `src` folder and rename it to `settings.json`. Fill in the `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`, and `REFRESH_TOKEN` fields in the settings.json file and save. 
 
-To use the default settings, copy `sample_settings.json` into `src/settings.json`.
+#### Configuration Settings
 
-#### Descriptions of Settings
+The following settings can be configured in `src/settings.json`:
 
-* `BOT_TIME_ZONE` - time zone of the computer running the bot, uncomment the line that you want to use
+* `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`, `REFRESH_TOKEN` - these are used to authenticate with the Reddit API. See `OAuth Setup` section above
 
-* `TIME_ZONE` - time zone of the team. uncomment the line that you want to use
+* `USER_AGENT` - user agent string to identify your bot to the Reddit API - feel free to add your subreddit and username on the end (e.g. "OAuth Baseball Game Thread Bot for Reddit v4.0.0 https://github.com/toddrob99/Baseball-GDT-Bot implemented for r/Phillies by u/toddrob")
 
-* `POST_TIME` - bot posts the thread POST_TIME hours before the game
+* `BOT_TIME_ZONE` - time zone of the computer running the bot ("ET", "CT", "MT", "PT")
 
-* `SUBREDDIT` - subreddit that you want the threads posted to
+* `TEAM_TIME_ZONE` - time zone of the team ("ET", "CT", "MT", "PT")
+
+* `POST_TIME` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
+
+* `SUBREDDIT` - subreddit that you want the threads posted to (do not includ "/r/", e.g. "Phillies")
 
 * `TEAM_CODE` - three letter code that represents team, look this up
 
-* `PREGAME_THREAD` - do you want a pre game thread?
+* `OFFDAY_THREAD` - do you want an off day thread on days when your team does not play? (true/false)
 
-* `POST_GAME_THREAD` - do you want a post game thread?
+* `PREGAME_THREAD` - do you want a pre game thread? (true/false)
 
-* `SUGGESTED_SORT` - what do you want the suggested sort to be? ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+* `CONSOLIDATE_PRE` - do you want to consolidate pre game threads for doubleheaders? (true/false)
 
-* `STICKY` - do you want the thread stickied? (mod only)
+* `POST_GAME_THREAD` - do you want a post game thread? (true/false)
 
-* `MESSAGE` - send submission shortlink to /u/baseballbot
+* `STICKY` - do you want the threads stickied? bot must have mod rights. (true/false)
 
-* `INBOXREPLIES` - do you want to receive thread replies in the bot's inbox?
+* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+
+* `MESSAGE` - send submission shortlink to /u/baseballbot to add a link to the game thread on the /r/Baseball sidebar (true/false)
+
+* `INBOXREPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+
+* `WINLOSS_POST_THREAD_TAGS` - do you want to use different postgame thread tags for wins and losses? (true/false - configure tags in POST_THREAD_SETTINGS)
+
+* `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") NOTE: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
+
+* `OFFDAY_THREAD_SETTINGS` - what to include in the offday threads
+	* `OFFDAY_THREAD_TAG` - prefix for the thread title ("OFF DAY THREAD:")
+	* `OFFDAY_THREAD_TIME` - time to post the offday thread ("8AM" in context of BOT_TIME_ZONE)
+	* `OFFDAY_THREAD_BODY` - text to include in the body of the post ("No game today. Feel free to discuss whatever you want in this thread.")
+	* `OFFDAY_THREAD_FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Off Day Thread")
 
 * `PRE_THREAD_SETTINGS` - what to include in the pregame threads
+	* `PRE_THREAD_TAG` - prefix for the thread title ("PREGAME THREAD:")
+	* `PRE_THREAD_TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
+	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Pregame Thread")
+	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`) - what to include in the body of the post (true/false)
 
-* `THREAD_SETTINGS` - what to include in game threads, example footer: "**Remember to sort by new to keep up!**"
-
-* `POST_THREAD_SETTINGS` - what to include in postgame threads, example footer: "**Remember to sort by new to keep up!**"
+* `THREAD_SETTINGS` - what to include in game threads
+	* `THREAD_TAG` - prefix for the thread title ("GAME THREAD:")
+	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Game Thread")
+	* `CONTENT` - what to include in the body of the post
+		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
+		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
+		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 	
----	
+* `POST_THREAD_SETTINGS` - what to include in postgame threads
+	* `POST_THREAD_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is false OR game result is tie/postponed/suspended/canceled ("POST GAME THREAD:")
+	* `POST_THREAD_WIN_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is true AND game result is win ("OUR TEAM WON:")
+	* `POST_THREAD_LOSS_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is true AND game result is loss ("OUR TEAM LOST:")
+	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Postgame Thread")
+	* `CONTENT` - what to include in the body of the post
+		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
+		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
+		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 
-If something doesn't seem right, feel free to message me or post it as a bug here.
+* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info, 3 for debug)
+---
+
+If something doesn't seem right, feel free to message me on reddit or post it as a bug on github.
 	
 This was written in Python 2.7, so beware if you are running Python 3 or
 	above that it may not work correctly. Also make sure you install
@@ -67,15 +102,41 @@ This was written in Python 2.7, so beware if you are running Python 3 or
 	
 Modules being used:
 
-	praw - interfacing reddit
+	praw 5.0.1 - interfacing reddit
 	simplejson - JSON parsing
 	urllib2 - pulling data from MLB servers
 	ElementTree - XML parsing
 
-### Updates
+---
+### Change Log
+
+#### v4.0.0
+* First official version of this fork
+* Updated to support praw 5.0.1
+* Rewrote core posting logic to support concurrent games (pre-season split squad)
+* Added support for doubleheaders
+	* Pregame threads can be posted separately (at the same time) or consolidated with the new `CONSOLIDATE_PRE` setting
+	* Game, postgame, and non-consolidated pregame threads will have a "Game #" suffix on the end of the thread titles
+	* Consolidated pregame threads will have a "DOUBLEHEADER" suffix on the end of the thread title
+* Added support for off day threads
+* Added options to include a link to the game's highlights on baseball.theater in game and postgame threads
+* Updated pre and post threads to honor suggested sort setting
+* Added option to set post flair on offday/pre/game/post threads, either as submitter if the sub allows it, or using mod rights - you may need to generate a new refresh token including updated permissions to use this feature (obtain a new refresh token using setup.py and the instructions above)
+* Added support for different postgame thread tags for wins, losses, and exceptions (tie/canceled/postponed)
+* Decreased wait between game thread edits to 30 seconds, made other waits consistent
+* Added `LOG_LEVEL` setting, increased available console logging to make it more clear what is happening (0-none, 1-error, 2-info, 3-debug)
+* Updated `README.md` to include new header, clarified oauth setup instructions, more thorough descriptions of configuration settings, and updated changelog
+* Added logic to explicitly unsticky pregame thread when posting game thread, and game thread when posting postgame thread
+* Enhanced existing logic to unsticky any stale threads each day
+* Adjusted default values in `sample_settings.json` to turn on offday/pre/post threads, set game thread post time to 3 hours, enable baseball.theater link in post threads, and include footer text for game threads.
+* Improved loading/validation of settings and error handling on startup. All settings will be validated rather than aborting on the first missing setting. Also added default values for most settings except those related to oauth, subreddit, and team code. Other missing settings will use default values and log a warning.
+* Added settings*.json and main-*.py to .gitignore, to make it easier to switch between config files and have a test version of main.py
+
+---
+### Change Log Prior to This Fork
 
 #### v3.0.2
-* GUI added. 
+* GUI added (but does not include all settings and is not supported in this fork)
 
 #### v3.0.1
 * Now uses OAuth!

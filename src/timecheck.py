@@ -7,19 +7,20 @@ import simplejson as json
 
 class TimeCheck:
 
-    def __init__(self,time_before):
+    def __init__(self,time_before,log_level):
         self.time_before = time_before
+        self.log_level = log_level
 
     def endofdaycheck(self):
         today = datetime.today()
         while True:
             check = datetime.today()
             if today.day != check.day:
-                print datetime.strftime(check, "%d %I:%M %p")
-                print "NEW DAY"
+                if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p")
+                if self.log_level>1: print "NEW DAY"
                 return
             else:
-                print "Last time check: " + datetime.strftime(check, "%d %I:%M %p")
+                if self.log_level>1: print "Last date check: " + datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(600)
 
 
@@ -30,8 +31,8 @@ class TimeCheck:
                 break
             except:
                 check = datetime.today()
-                print datetime.strftime(check, "%d %I:%M %p")
-                print "gamecheck couldn't find file, trying again..."
+                if self.log_level>0: print "gamecheck couldn't find file, trying again in twenty seconds..."
+                if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(20)
         jsonfile = json.load(response)
         game = jsonfile.get('data').get('game')
@@ -41,20 +42,22 @@ class TimeCheck:
             check = datetime.today()
             if date_object >= check:
                 if (date_object - check).seconds <= self.time_before:
-                    return
+                    return True
                 else:
-                    print "Last game check: " + datetime.strftime(check, "%d %I:%M %p")
-                    time.sleep(600)
+                    if self.log_level>1: print "Not time to post yet, sleeping for five seconds..."
+                    if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p")
+                    time.sleep(5)
+                    return False
             else:
-                return
+                return True
 
     def ppcheck(self,dir):
         try:
             response = urllib2.urlopen(dir + "linescore.json")
         except:
             check = datetime.today()
-            print datetime.strftime(check, "%d %I:%M %p")
-            print "ppcheck Couldn't find file, trying again..."
+            if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
+            if self.log_level>0: print "ppcheck Couldn't find file, trying again in twenty seconds..."
             time.sleep(20)
         jsonfile = json.load(response)
         game = jsonfile.get('data').get('game')
@@ -67,5 +70,5 @@ class TimeCheck:
             if date_object.hour <= check.hour:
                 return
             else:
-                print "Last pre-game check: " + datetime.strftime(check, "%d %I:%M %p")
+                if self.log_level>1: print "Last pre-game/offday check: " + datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(600)

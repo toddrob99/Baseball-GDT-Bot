@@ -11,33 +11,43 @@ import time
 class Editor:
 
     def __init__(self,time_info,pre_thread_settings,thread_settings,
-            post_thread_settings):
+            post_thread_settings,log_level):
         (self.time_zone,self.time_change,) = time_info
-        (self.pre_thread_tag, self.pre_thread_time,
+        (self.pre_thread_tag, self.pre_thread_time, self.pre_thread_flair,
             (self.pre_probables, self.pre_first_pitch)
         ) = pre_thread_settings
-        (self.thread_tag, 
+        (self.thread_tag, self.thread_flair,
             (self.header, self.box_score, 
              self.line_score, self.scoring_plays,
-             self.highlights, self.footer)
+             self.highlights, self.footer, self.theater_link)
         ) = thread_settings
-        (self.post_thread_tag, 
+        (self.post_thread_tag, self.post_thread_flair, self.post_thread_win_tag, self.post_thread_loss_tag,
             (self.post_header, self.post_box_score, 
              self.post_line_score, self.post_scoring_plays,
-             self.post_highlights, self.post_footer)
+             self.post_highlights, self.post_footer, self.post_theater_link)
         ) = post_thread_settings
+        self.log_level = log_level
 
-
-    def generate_title(self,dir,thread):
+    def generate_title(self,dir,thread,includewinloss=False,myteam="",dh=False,dhnum=0,consolidatepre=False):
         if thread == "pre": title = self.pre_thread_tag + " "
         elif thread == "game": title = self.thread_tag + " "
-        elif thread == "post": title = self.post_thread_tag + " "
+        elif thread == "post":
+            if includewinloss:
+                myteamwon = ""
+                myteamwon = self.didmyteamwin(dir, myteam)
+                if myteamwon == "0":
+                    title = self.post_thread_loss_tag + " "
+                elif myteamwon == "1":
+                    title = self.post_thread_win_tag + " "
+                else:
+                    title = self.post_thread_tag + " "
+            else: title = self.post_thread_tag + " "
         while True:
             try:
                 response = urllib2.urlopen(dir + "linescore.json")
                 break
             except:
-                print "Couldn't find linescore.json for title, trying again..."
+                if self.log_level>0: print "Couldn't find linescore.json for title, trying again..."
                 time.sleep(20)
         filething = json.load(response)
         game = filething.get('data').get('game')
@@ -48,20 +58,39 @@ class Editor:
         title = title + game.get('home_team_name') + " (" + game.get('home_win') + "-" + game.get('home_loss') + ")"
         title = title + " - "
         title = title + date_object.strftime("%B %d, %Y")
-        print "Returning title..."
+        if dh:
+            if thread == "pre" and consolidatepre:
+                title = title + " - DOUBLEHEADER"
+            else:
+                title = title + " - GAME " + dhnum
+        if self.log_level>2: print "Returning",thread,"title..."
         return title
 
-    def generate_pre_code(self,dirs):
+    def generate_pre_code(self,d,otherd=False):
         code = ""
-        for d in dirs:
+
+        if otherd:
+            code = code + "#Game " + d[-2:-1] + "\n"
+
+        temp_dirs = []
+        temp_dirs.append(d + "linescore.json")
+        temp_dirs.append(d + "gamecenter.xml")
+        files = self.download_pre_files(temp_dirs)
+        if self.pre_probables: code = code + self.generate_pre_probables(files)
+        if self.pre_first_pitch: code = code + self.generate_pre_first_pitch(files)
+        code = code + "\n\n"
+
+        if otherd:
+            code = code + "#Game " + otherd[-2:-1] + "\n"
             temp_dirs = []
-            temp_dirs.append(d + "linescore.json")
-            temp_dirs.append(d + "gamecenter.xml")
+            temp_dirs.append(otherd + "linescore.json")
+            temp_dirs.append(otherd + "gamecenter.xml")
             files = self.download_pre_files(temp_dirs)
             if self.pre_probables: code = code + self.generate_pre_probables(files)
             if self.pre_first_pitch: code = code + self.generate_pre_first_pitch(files)
             code = code + "\n\n"
-        print "Returning all code..."
+
+        if self.log_level>2: print "Returning all code..."
         return code
 
     def download_pre_files(self,dirs):
@@ -113,7 +142,7 @@ class Editor:
             
             return probables
         except:
-            print "Missing data for probables, returning empty string..."
+            if self.log_level>2: print "Missing data for probables, returning empty string..."
             return probables
 
     def generate_pre_first_pitch(self,files):
@@ -130,7 +159,7 @@ class Editor:
 
             return first_pitch
         except:
-            print "Missing data for first_pitch, returning empty string..."
+            if self.log_level>2: print "Missing data for first_pitch, returning empty string..."
             return first_pitch
 
 
@@ -149,17 +178,17 @@ class Editor:
             if self.box_score: code = code + self.generate_boxscore(files)
             if self.line_score: code = code + self.generate_linescore(files)
             if self.scoring_plays: code = code + self.generate_scoring_plays(files)
-            if self.highlights: code = code + self.generate_highlights(files)
+            if self.highlights: code = code + self.generate_highlights(files,self.theater_link)
             if self.footer: code = code + self.footer + "\n\n"
         elif thread == "post":
             if self.post_header: code = code + self.generate_header(files)
             if self.post_box_score: code = code + self.generate_boxscore(files)
             if self.post_line_score: code = code + self.generate_linescore(files)
             if self.post_scoring_plays: code = code + self.generate_scoring_plays(files)
-            if self.post_highlights: code = code + self.generate_highlights(files)
+            if self.post_highlights: code = code + self.generate_highlights(files,self.post_theater_link)
             if self.post_footer: code = code + self.post_footer + "\n\n"
         code = code + self.generate_status(files)
-        print "Returning all code..."
+        if self.log_level>2: print "Returning all code..."
         return code
 
 
@@ -179,7 +208,7 @@ class Editor:
             response = urllib2.urlopen(dirs[5])
             files["highlights"] = ET.parse(response)
         except Exception as e:
-            print e
+            if self.log_level>1: print e
 
         return files
 
@@ -201,7 +230,7 @@ class Editor:
             notes = self.get_notes(game.get('home_team_name'), game.get('away_team_name'))
             header = "|Game Info|Links|\n"
             header = header + "|:--|:--|\n"
-            header = header + "|**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + "@ " + game.get(
+            header = header + "|**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + " @ " + game.get(
                 'venue') + "|[Gameday](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get(
                 'gameday_link') + ")|\n"
             header = header + "|**Weather:** " + weather.get('condition') + ", " + weather.get(
@@ -230,10 +259,10 @@ class Editor:
             header = header + "|**Notes:** [Away](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[
                 1] + "), [Home](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[0] + ")|\n"
             header = header + "\n\n"
-            print "Returning header..."
+            if self.log_level>2: print "Returning header..."
             return header
         except:
-            print "Missing data for header, returning empty string..."
+            if self.log_level>2: print "Missing data for header, returning empty string..."
             return header
 
 
@@ -317,10 +346,10 @@ class Editor:
             for i in range(0, len(homepitchers)):
                 boxscore = boxscore + str(awaypitchers[i]) + "|" + str(homepitchers[i]) + "\n"
             boxscore = boxscore + "\n\n"
-            print "Returning boxscore..."
+            if self.log_level>2: print "Returning boxscore..."
             return boxscore
         except:
-            print "Missing data for boxscore, returning blank text..."
+            if self.log_level>2: print "Missing data for boxscore, returning blank text..."
             return boxscore
 
 
@@ -364,10 +393,10 @@ class Editor:
             linescore = linescore + game.get('home_team_runs') + "|" + game.get('home_team_hits') + "|" + game.get(
                 'home_team_errors')
             linescore = linescore + "\n\n"
-            print "Returning linescore..."
+            if self.log_level>2: print "Returning linescore..."
             return linescore
         except:
-            print "Missing data for linescore, returning blank text..."
+            if self.log_level>2: print "Missing data for linescore, returning blank text..."
             return linescore
 
 
@@ -411,14 +440,14 @@ class Editor:
                     scoringplays = scoringplays + s.get("home") + "-" + s.get("away")
                 scoringplays = scoringplays + "\n"
             scoringplays = scoringplays + "\n\n"
-            print "Returning scoringplays..."
+            if self.log_level>2: print "Returning scoringplays..."
             return scoringplays
         except:
-            print "Missing data for scoringplays, returning blank text..."
+            if self.log_level>2: print "Missing data for scoringplays, returning blank text..."
             return scoringplays
 
 
-    def generate_highlights(self,files):
+    def generate_highlights(self,files,theater_link=False):
         highlight = ""
         try:
             root = files["highlights"].getroot()
@@ -432,11 +461,15 @@ class Editor:
                         highlight = highlight + "|" + team[0] + "|[" + v.find("headline").text + "](" + v.find("url").text + ")|\n"                   
                     except:
                         highlight = highlight + "|[](/MLB)|[" + v.find("headline").text + "](" + v.find("url").text + ")|\n"                     
+            if theater_link:
+                game = files["linescore"].get('data').get('game')
+                notes = self.get_notes(game.get('home_team_name'), game.get('away_team_name'))
+                highlight = highlight + "||See all highlights at [Baseball.Theater](http://baseball.theater/team/" + notes[0] + "/game/" + datetime.now().strftime('%Y%m%d') + ")|\n"
             highlight = highlight + "\n\n"
-            print "Returning highlight..."
+            if self.log_level>2: print "Returning highlight..."
             return highlight
         except:
-            print "Missing data for highlight, returning blank text..."
+            if self.log_level>2: print "Missing data for highlight, returning blank text..."
             return highlight
 
 
@@ -475,10 +508,10 @@ class Editor:
             for i in range(0, len(homepitchers)):
                 decisions = decisions + str(homepitchers[i])
             decisions = decisions + "\n\n"
-            print "Returning decisions..."
+            if self.log_level>2: print "Returning decisions..."
             return decisions
         except:
-            print "Missing data for decisions, returning blank text..."
+            if self.log_level>2: print "Missing data for decisions, returning blank text..."
             return decisions
 
 
@@ -486,6 +519,7 @@ class Editor:
         status = ""
         try:
             game = files["linescore"].get('data').get('game')
+            if self.log_level>2: print "Status:",game.get('status')
             if game.get('status') == "Game Over" or game.get('status') == "Final":
                 s = files["linescore"].get('data').get('game')
                 status = status + "##FINAL: "
@@ -493,17 +527,17 @@ class Editor:
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
             elif game.get('status') == "Completed Early":
                 status = status + "##COMPLETED EARLY: "
@@ -511,36 +545,87 @@ class Editor:
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
-                    print "Returning status..."
+                    if self.log_level>2: print "Returning status..."
                     return status
             elif game.get('status') == "Postponed":
                 status = status + "##POSTPONED\n\n"
-                print "Returning status..."
+                if self.log_level>2: print "Returning status..."
                 return status
             elif game.get('status') == "Suspended":
                 status = status + "##SUSPENDED\n\n"
-                print "Returning status..."
+                if self.log_level>2: print "Returning status..."
                 return status
             elif game.get('status') == "Cancelled":
                 status = status + "##CANCELLED\n\n"
-                print "Returning status..."
+                if self.log_level>2: print "Returning status..."
                 return status
             else:
-                print "Status not final or postponed, returning blank text..."
+                if self.log_level>2: print "Status not final or postponed, returning blank text..."
                 return status
         except:
-            print "Missing data for status, returning blank text..."
+            if self.log_level>2: print "Missing data for status, returning blank text..."
             return status
+
+    def didmyteamwin(self, dir, myteam):
+    #returns 0 for loss, 1 for win, 2 for tie, 3 for postponed/suspended/canceled, blank for exception
+        myteamwon = ""
+        myteamis = ""
+        dirs = []
+        dirs.append(dir + "linescore.json")
+        dirs.append(dir + "boxscore.json")
+        dirs.append(dir + "gamecenter.xml")
+        dirs.append(dir + "plays.json")
+        dirs.append(dir + "/inning/inning_Scores.xml")
+        dirs.append(dir + "/media/mobile.xml")
+        files = self.download_files(dirs)
+        game = files["linescore"].get('data').get('game')
+
+        if game.get('home_code') == myteam:
+            myteamis = "home"
+        elif game.get('away_code') == myteam:
+            myteamis = "away"
+        else:
+            if self.log_level>2: print "Cannot determine if my team is home or away, returning blank text for whether my team won..."
+            return myteamwon
+        if game.get('status') == "Game Over" or game.get('status') == "Final" or game.get('status') == "Completed Early":
+            s = files["linescore"].get('data').get('game')
+            hometeamruns = int(s.get("home_team_runs"))
+            awayteamruns = int(s.get("away_team_runs"))
+            if int(hometeamruns == awayteamruns):
+                myteamwon = "2"
+                if self.log_level>2: print "Returning whether my team won (TIE)..."
+                return myteamwon
+            else:
+                if hometeamruns < awayteamruns:
+                    if myteamis == "home":
+                        myteamwon = "0"
+                    elif myteamis == "away":
+                        myteamwon = "1"
+                    if self.log_level>2: print "Returning whether my team won..."
+                    return myteamwon
+                elif hometeamruns > awayteamruns:
+                    if myteamis == "home":
+                        myteamwon = "1"
+                    elif myteamis == "away":
+                        myteamwon = "0"
+                    if self.log_level>2: print "Returning whether my team won..."
+                    return myteamwon
+        elif game.get('status') == "Postponed" or game.get('status') == "Suspended" or game.get('status') == "Cancelled":
+            myteamwon = "3"
+            if self.log_level>2: print "Returning whether my team won (postponed, suspended, or canceled)..."
+            return myteamwon
+        if self.log_level>2: print "Returning whether my team won (exception)..." + myteamwon
+        return myteamwon
 
     def get_subreddits(self, homename, awayname):
         subreddits = []

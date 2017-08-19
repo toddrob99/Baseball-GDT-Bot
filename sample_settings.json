@@ -1,22 +1,34 @@
 {
     "CLIENT_ID": "XXX",
     "CLIENT_SECRET": "XXX",
-    "REDIRECT_URI": "http://127.0.0.1:65010/authorize_callback",
+    "REDIRECT_URI": "http://localhost:8080",
     "REFRESH_TOKEN": "XXX",
+    "USER_AGENT": "OAuth Baseball Game Thread Bot for Reddit v4.0.0 https://github.com/toddrob99/Baseball-GDT-Bot",
     "BOT_TIME_ZONE": "ET",
     "TEAM_TIME_ZONE": "ET",
-    "POST_TIME": 1,
+    "POST_TIME": 3,
     "SUBREDDIT": "XXX",
     "TEAM_CODE": "XXX",
-    "PREGAME_THREAD": false,
-    "POST_GAME_THREAD": false,
+    "OFFDAY_THREAD": true,
+    "PREGAME_THREAD": true,
+    "CONSOLIDATE_PRE": true,
+    "POST_GAME_THREAD": true,
     "STICKY": true,
     "SUGGESTED_SORT": "new",
     "MESSAGE": false,
     "INBOXREPLIES": false,
+    "WINLOSS_POST_THREAD_TAGS": false,
+    "FLAIR_MODE": "none",
+    "OFFDAY_THREAD_SETTINGS": {
+        "OFFDAY_THREAD_TAG": "OFF DAY THREAD:",
+        "OFFDAY_THREAD_TIME": "9AM",
+        "OFFDAY_THREAD_BODY": "No game today.",
+        "OFFDAY_THREAD_FLAIR": ""
+    },
     "PRE_THREAD_SETTINGS": {
         "PRE_THREAD_TAG": "PREGAME THREAD:",
         "PRE_THREAD_TIME": "9AM",
+        "FLAIR": "",
         "CONTENT": {
             "PROBABLES": true,
             "FIRST_PITCH": true
@@ -24,24 +36,31 @@
     },
     "THREAD_SETTINGS": {
         "THREAD_TAG": "GAME THREAD:",
+        "FLAIR": "",
         "CONTENT": {
             "HEADER": true,
             "BOX_SCORE": true,
             "LINE_SCORE": true,
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
-            "FOOTER": ""
+            "FOOTER": "**Remember to sort by new to keep up!**",
+            "THEATER_LINK": false
         }
     },
     "POST_THREAD_SETTINGS": {
         "POST_THREAD_TAG": "POST GAME THREAD:",
+        "POST_THREAD_WIN_TAG": "OUR TEAM WON:",
+        "POST_THREAD_LOSS_TAG": "OUR TEAM LOST:",
+        "FLAIR": "",
         "CONTENT": {
             "HEADER": true,
             "BOX_SCORE": true,
             "LINE_SCORE": true,
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
-            "FOOTER": ""
+            "FOOTER": "",
+            "THEATER_LINK": true
         }
-    }
+    },
+    "LOG_LEVEL": 2
 }

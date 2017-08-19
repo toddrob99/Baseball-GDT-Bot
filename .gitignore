@@ -1,6 +1,7 @@
 *.pyc
 .DS_Store
-settings.json
+settings*.json
 *.sh
 *.out
 *-main.py
+main-*.py

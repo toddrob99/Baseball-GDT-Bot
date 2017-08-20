@@ -614,7 +614,7 @@ class Bot:
 
                                     if self.MESSAGE:
                                         if self.LOG_LEVEL>1: print "Messaging Baseballbot..."
-                                        r.redditor('baseballbot').message('Gamethread posted', sub.shortlink)
+                                        r.redditor('baseballbot').message('Gamethread posted', game.get('gamesub').shortlink)
                                         if self.LOG_LEVEL>1: print "Baseballbot messaged..."
 
                                     if self.FLAIR_MODE == 'submitter':

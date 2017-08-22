@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.1.1'
+        self.VERSION = '4.1.2'
         self.BOT_TIME_ZONE = None
         self.TEAM_TIME_ZONE = None
         self.POST_TIME = None
@@ -403,6 +403,7 @@ class Bot:
             else: stale_games = games
             if self.LOG_LEVEL>2: print "stale games:",stale_games
 
+            offday = {}
             othergame = {}
             games = {}
             i = 1
@@ -422,7 +423,6 @@ class Bot:
                 if self.LOG_LEVEL>1: print "No games today..."
 
             if self.OFFDAY_THREAD and len(games) == 0:
-                offday = {}
                 timechecker.pregamecheck(self.OFFDAY_THREAD_SETTINGS[1])
                 offday.update({'offtitle': self.OFFDAY_THREAD_SETTINGS[0] + " " + datetime.strftime(datetime.today(), "%A, %B %d"), 'offmessage' : self.OFFDAY_THREAD_SETTINGS[2]})
                 try:
@@ -594,6 +594,9 @@ class Bot:
                     for otherk,othergame in games.items():
                         if othergame.get('url')[:-2] == game.get('url')[:-2] and othergame.get('url') != game.get('url'): break
                     if not othergame.get('doubleheader'): othergame = {}
+                    if othergame.get('doubleheader') and othergame.get('final') and not game.get('gamesub'):
+                        if self.LOG_LEVEL>2: print "Updating title for doubleheader Game",k,"since Game",otherk,"is final..."
+                        game.update({'gametitle': edit.generate_title(game['url'],'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
                     if timechecker.gamecheck(game['url'],game,othergame) == True:
                         if not timechecker.ppcheck(game['url']) and not game.get('final'):
                             check = datetime.today()
@@ -789,7 +792,7 @@ class Bot:
                 if len(offday):
                     if self.LOG_LEVEL>2: print "offday:",offday
                 if self.LOG_LEVEL>2: print "games:",games
-                if self.LOG_LEVEL>2: print "Active Games:",activegames
+                if self.LOG_LEVEL>2: print "Active Games:",activegames,"- Pending Games:",pendinggames
 
                 if activegames == 0 and pendinggames == 0:
                     if self.LOG_LEVEL>1: print "All games final for today (or off day), going into end of day loop... "

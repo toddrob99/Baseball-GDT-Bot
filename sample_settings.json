@@ -3,7 +3,7 @@
     "CLIENT_SECRET": "XXX",
     "REDIRECT_URI": "http://localhost:8080",
     "REFRESH_TOKEN": "XXX",
-    "USER_AGENT": "OAuth Baseball Game Thread Bot for Reddit v4.0.0 https://github.com/toddrob99/Baseball-GDT-Bot",
+    "USER_AGENT": "",
     "BOT_TIME_ZONE": "ET",
     "TEAM_TIME_ZONE": "ET",
     "POST_TIME": 3,
@@ -12,6 +12,7 @@
     "OFFDAY_THREAD": true,
     "PREGAME_THREAD": true,
     "CONSOLIDATE_PRE": true,
+    "HOLD_DH_GAME2_THREAD": true,
     "POST_GAME_THREAD": true,
     "STICKY": true,
     "SUGGESTED_SORT": "new",
@@ -31,7 +32,8 @@
         "FLAIR": "",
         "CONTENT": {
             "PROBABLES": true,
-            "FIRST_PITCH": true
+            "FIRST_PITCH": true,
+            "DESCRIPTION": true
         }
     },
     "THREAD_SETTINGS": {

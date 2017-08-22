@@ -5,7 +5,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.0.0
+### Current Version: 4.1.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -29,7 +29,7 @@ The following settings can be configured in `src/settings.json`:
 
 * `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`, `REFRESH_TOKEN` - these are used to authenticate with the Reddit API. See `OAuth Setup` section above
 
-* `USER_AGENT` - user agent string to identify your bot to the Reddit API - feel free to add your subreddit and username on the end (e.g. "OAuth Baseball Game Thread Bot for Reddit v4.0.0 https://github.com/toddrob99/Baseball-GDT-Bot implemented for r/Phillies by u/toddrob")
+* `USER_AGENT` - user agent string to identify your bot to the Reddit API - this will be appended to the system-generated user agent (e.g. "implemented for r/Phillies by u/toddrob")
 
 * `BOT_TIME_ZONE` - time zone of the computer running the bot ("ET", "CT", "MT", "PT")
 
@@ -46,6 +46,8 @@ The following settings can be configured in `src/settings.json`:
 * `PREGAME_THREAD` - do you want a pre game thread? (true/false)
 
 * `CONSOLIDATE_PRE` - do you want to consolidate pre game threads for doubleheaders? (true/false)
+
+* `HOLD_DH_GAME2_THREAD` - do you want to hold the game thread for doubleheader game 2 until game 1 is final? (true/false)
 
 * `POST_GAME_THREAD` - do you want a post game thread? (true/false)
 
@@ -71,7 +73,7 @@ The following settings can be configured in `src/settings.json`:
 	* `PRE_THREAD_TAG` - prefix for the thread title ("PREGAME THREAD:")
 	* `PRE_THREAD_TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
 	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Pregame Thread")
-	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`) - what to include in the body of the post (true/false)
+	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`) - what to include in the body of the post (true/false)
 
 * `THREAD_SETTINGS` - what to include in game threads
 	* `THREAD_TAG` - prefix for the thread title ("GAME THREAD:")
@@ -109,6 +111,15 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.1.0
+* Fixed message to /u/baseballbot, was failing to generate the shortlink (hotfixed in v4.0.0)
+* Added "Game Note" to pregame thread via new `PRE_THREAD_SETTINGS`:`CONTENT`:`DESCRIPTION` setting (default true), and to game/post thread at the end of the header table. This comes from the "Description" field which included in the MLB data for makeup games, e.g. "Makeup of 5/10 PPD"
+* Added and improved some log entries
+* Fixed posting/editing quirks related to doubleheader consolidated pregame threads
+* Base user agent string will now be generated programmatically, and the USER_AGENT setting will be appended.
+* Added support for MLB not specifying a valid start time for doubleheader game 2. MLB apparently publishes 3:33am for game 2, so if game 2 start time is before game 1 start time, the bot will use game 1 start time plus 3 hours for game 2 start time. This will only apply to posting time of the game thread for game 2.
+* Added `HOLD_DH_GAME2_THREAD` option to override `POST_TIME` and hold game thread for doubleheader game 2 until game 1 is final (default true)
 
 #### v4.0.0
 * First official version of this fork

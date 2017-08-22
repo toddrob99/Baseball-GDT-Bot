@@ -29,6 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
+        self.VERSION = '4.1.0'
         self.BOT_TIME_ZONE = None
         self.TEAM_TIME_ZONE = None
         self.POST_TIME = None
@@ -38,6 +39,7 @@ class Bot:
         self.TEAM_CODE = None
         self.PREGAME_THREAD = None
         self.CONSOLIDATE_PRE = None
+        self.HOLD_DH_GAME2_THREAD = None
         self.POST_GAME_THREAD = None
         self.STICKY = None
         self.SUGGESTED_SORT = None
@@ -69,8 +71,9 @@ class Bot:
 
             self.USER_AGENT = settings.get('USER_AGENT')
             if self.USER_AGENT == None:
-                warnings.append('Missing USER_AGENT, using default...')
-                self.USER_AGENT = 'OAuth Baseball Game Thread Bot for Reddit v4.0.0 https://github.com/toddrob99/Baseball-GDT-Bot'
+                warnings.append('Missing USER_AGENT, using default ("")...')
+                self.USER_AGENT = ''
+            self.USER_AGENT = "OAuth Baseball Game Thread Bot for Reddit v" + self.VERSION + " https://github.com/toddrob99/Baseball-GDT-Bot " + self.USER_AGENT
 
             self.REDIRECT_URI = settings.get('REDIRECT_URI')
             if self.REDIRECT_URI == None:
@@ -117,6 +120,11 @@ class Bot:
             if self.CONSOLIDATE_PRE == None:
                 warnings.append('Missing CONSOLIDATE_PRE, using default (true)...')
                 self.CONSOLIDATE_PRE = True
+
+            self.HOLD_DH_GAME2_THREAD = settings.get('HOLD_DH_GAME2_THREAD')
+            if self.HOLD_DH_GAME2_THREAD == None:
+                warnings.append('Missing HOLD_DH_GAME2_THREAD, using default (true)...')
+                self.HOLD_DH_GAME2_THREAD = True
 
             self.POST_GAME_THREAD = settings.get('POST_GAME_THREAD')
             if self.POST_GAME_THREAD == None:
@@ -171,16 +179,16 @@ class Bot:
 
             temp_settings = settings.get('PRE_THREAD_SETTINGS')
             if temp_settings == None:
-                warnings.append('Missing PRE_THREAD_SETTINGS, using defaults (PRE_THREAD_TAG: "PREGAME THREAD:", PRE_THREAD_TIME: 9AM, FLAIR: "", PROBABLES: true, FIRST_PITCH: true)...')
-                self.PRE_THREAD_SETTINGS = ('PREGAME THREAD:','9AM','',(True,True))
+                warnings.append('Missing PRE_THREAD_SETTINGS, using defaults (PRE_THREAD_TAG: "PREGAME THREAD:", PRE_THREAD_TIME: 9AM, FLAIR: "", PROBABLES: true, FIRST_PITCH: true, DESCRIPTION: true)...')
+                self.PRE_THREAD_SETTINGS = ('PREGAME THREAD:','9AM','',(True,True,True))
             else:
                 content_settings = temp_settings.get('CONTENT')
                 if content_settings == None:
-                    warnings.append('Missing PRE_THREAD_SETTINGS : CONTENT, using defaults (PROBABLES: true, FIRST_PITCH: true)...')
-                    self.PRE_THREAD_SETTINGS = (temp_settings.get('PRE_THREAD_TAG'),temp_settings.get('PRE_THREAD_TIME'), temp_settings.get('FLAIR'), (True,True))
+                    warnings.append('Missing PRE_THREAD_SETTINGS : CONTENT, using defaults (PROBABLES: true, FIRST_PITCH: true, DESCRIPTION: true)...')
+                    self.PRE_THREAD_SETTINGS = (temp_settings.get('PRE_THREAD_TAG'),temp_settings.get('PRE_THREAD_TIME'), temp_settings.get('FLAIR'), (True,True,True))
                 else:
                     self.PRE_THREAD_SETTINGS = (temp_settings.get('PRE_THREAD_TAG'),temp_settings.get('PRE_THREAD_TIME'), temp_settings.get('FLAIR'),
-                                                    (content_settings.get('PROBABLES'),content_settings.get('FIRST_PITCH'))
+                                                    (content_settings.get('PROBABLES'),content_settings.get('FIRST_PITCH'),content_settings.get('DESCRIPTION'))
                                                )
             if self.PRE_THREAD_SETTINGS[0] == None:
                 warnings.append('Missing PRE_THREAD_SETTINGS : PRE_THREAD_TAG, using default ("PREGAME THREAD:")...')
@@ -197,6 +205,9 @@ class Bot:
             if self.PRE_THREAD_SETTINGS[3][1] == None:
                 warnings.append('Missing PRE_THREAD_SETTINGS : CONTENT : FIRST_PITCH, using default (true)...')
                 self.PRE_THREAD_SETTINGS[3][1] = True
+            if self.PRE_THREAD_SETTINGS[3][2] == None:
+                warnings.append('Missing PRE_THREAD_SETTINGS : CONTENT : DESCRIPTION, using default (true)...')
+                self.PRE_THREAD_SETTINGS[3][2] = True
 
             temp_settings = settings.get('THREAD_SETTINGS')
             if temp_settings == None:
@@ -326,6 +337,7 @@ class Bot:
                     print "FATAL ERROR:",fatal_err
             return
 
+        if self.LOG_LEVEL>2: print "Initiating PRAW instance with User Agent:",self.USER_AGENT
         r = praw.Reddit(client_id=self.CLIENT_ID,
                         client_secret=self.CLIENT_SECRET,
                         refresh_token=self.REFRESH_TOKEN,
@@ -360,7 +372,7 @@ class Bot:
             self.BOT_TIME_ZONE = 'ET'
             time_before = self.POST_TIME * 60 * 60
 
-        timechecker = timecheck.TimeCheck(time_before, self.LOG_LEVEL)
+        timechecker = timecheck.TimeCheck(time_before, self.LOG_LEVEL, self.HOLD_DH_GAME2_THREAD)
         
         games = {}
         offday = {}
@@ -397,12 +409,12 @@ class Bot:
             for u in directories:
                 games[i] = {'url' : u, 'gamenum' : u[-2:-1], 'doubleheader' : False, 'final' : False}
                 if u[-2:-1] != '1':
-                    if self.LOG_LEVEL>1: print "Doubleheader detected..."
+                    if self.LOG_LEVEL>1: print "Game",i,"detected as doubleheader..."
                     games[i].update({'doubleheader' : True})
                     for tk,tgame in games.items():
-                        if tgame.get('url')[:-2] == u[:-2]:
+                        if tgame.get('url')[:-2] == u[:-2] and tk != i:
                             tgame.update({'doubleheader' : True})
-                            if self.LOG_LEVEL>1: print "Linked other game in the doubleheader..."
+                            if self.LOG_LEVEL>1: print "Game",tk,"marked as other game in doubleheader..."
                 i += 1
             if self.LOG_LEVEL>2: print "games:",games
             
@@ -472,10 +484,13 @@ class Bot:
                         if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
                 except Exception, err:
                     if self.LOG_LEVEL>0: print err
-            
+            elif not self.OFFDAY_THREAD and len(games) == 0:
+                if self.LOG_LEVEL>1: print "Off day detected, but off day thread disabled."
+
             if self.PREGAME_THREAD and len(games) > 0:
                 timechecker.pregamecheck(self.PRE_THREAD_SETTINGS[1])
                 for k,game in games.items():
+                    if self.LOG_LEVEL>1: print "Preparing to post pregame thread for Game",k,"..."
                     game.update({'pretitle': edit.generate_title(game.get('url'),"pre",self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'),self.CONSOLIDATE_PRE)})
                     while True:
                         try:
@@ -497,16 +512,22 @@ class Bot:
                                 stale_games = {}
                             if self.CONSOLIDATE_PRE and game.get('doubleheader'):
                                 for otherk,othergame in games.items():
-                                    if othergame.get('url')[:-2] == u[:-2] and othergame.get('url') != game.get('url'): break
+                                    if othergame.get('url')[:-2] == game.get('url')[:-2] and othergame.get('url') != game.get('url'): break
                                 if not othergame.get('doubleheader'): othergame = {}
-                            if not game.get('presub') and othergame.get('presub'):
-                                if self.LOG_LEVEL>1: print "Linking this game to existing submission from the other game in the doubleheader..."
-                                game.update({'presub' : othergame.get('presub')})
-                                break
+                                if game.get('presub'):
+                                    if self.LOG_LEVEL>1: print "Consolidated pregame thread already posted and linked to this game..."
+                                    break
+                                if not game.get('presub') and othergame.get('presub'):
+                                    if self.LOG_LEVEL>1: print "Linking this game to existing consolidated pregame thread from doubleheader game",otherk,"..."
+                                    game.update({'presub' : othergame.get('presub')})
+                                    break
                             for submission in subreddit.new():
                                 if submission.title == game.get('pretitle'):
                                     if game.get('doubleheader') and self.CONSOLIDATE_PRE:
-                                        if self.LOG_LEVEL>1: print "Game",k,"Pregame thread already posted, getting submission but not editing because it's a consolidated doubleheader thread..."
+                                        if self.LOG_LEVEL>1: print "Game",k,"Consolidated doubleheader pregame thread already posted, submitting edits..."
+                                        game.update({'presub' : submission})
+                                        game.get('presub').edit(edit.generate_pre_code(game.get('url'),othergame.get('url')))
+                                        if self.LOG_LEVEL>1: print "Edits submitted. Sleeping for ten seconds..."
                                         game.update({'presub' : submission})
                                     else:
                                         if self.LOG_LEVEL>1: print "Game",k,"Pregame thread already posted, submitting edits..."
@@ -553,21 +574,27 @@ class Bot:
 
                             if self.CONSOLIDATE_PRE and game.get('doubleheader'):
                                 if othergame.get('doubleheader'):
-                                    if self.LOG_LEVEL>1: print "Linking submission to other game in the doubleheader..."
+                                    if self.LOG_LEVEL>1: print "Linking pregame submission to doubleheader Game",otherk,"..."
                                     othergame.update({'presub' : game.get('presub')})
 
                             break
                         except Exception, err:
                             if self.LOG_LEVEL>0: print err, ": retrying after one minute..."
                             time.sleep(60)
+                if self.LOG_LEVEL>1: print "Finished posting pregame threads..."
+                if self.LOG_LEVEL>2: print "games:",games
 
+            if self.LOG_LEVEL>2: print "Generating game thread titles for all games..."
             for k,game in games.items():
                 game.update({'gametitle': edit.generate_title(game['url'],'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
 
             while True:
                 for k,game in games.items():
                     if self.LOG_LEVEL>1: print "Game",k,"check"
-                    if timechecker.gamecheck(game['url']) == True:
+                    for otherk,othergame in games.items():
+                        if othergame.get('url')[:-2] == game.get('url')[:-2] and othergame.get('url') != game.get('url'): break
+                    if not othergame.get('doubleheader'): othergame = {}
+                    if timechecker.gamecheck(game['url'],game,othergame) == True:
                         if not timechecker.ppcheck(game['url']) and not game.get('final'):
                             check = datetime.today()
                             try:

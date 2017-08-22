@@ -7,9 +7,10 @@ import simplejson as json
 
 class TimeCheck:
 
-    def __init__(self,time_before,log_level):
+    def __init__(self,time_before,log_level,hold_dh_game2_thread):
         self.time_before = time_before
         self.log_level = log_level
+        self.hold_dh_game2_thread = hold_dh_game2_thread
 
     def endofdaycheck(self):
         today = datetime.today()
@@ -23,8 +24,8 @@ class TimeCheck:
                 if self.log_level>1: print "Last date check: " + datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(600)
 
-
-    def gamecheck(self,dir):
+    def gamecheck(self,dir,thisgame={},othergame={}):
+        if thisgame.get('gamesub'): return True #game thread is already posted
         while True:
             try:
                 response = urllib2.urlopen(dir + "linescore.json")
@@ -38,12 +39,38 @@ class TimeCheck:
         game = jsonfile.get('data').get('game')
         timestring = game.get('time_date') + " " + game.get('ampm')
         date_object = datetime.strptime(timestring, "%Y/%m/%d %I:%M %p")
+        if thisgame.get('doubleheader') and thisgame.get('gamenum')=='2':
+            if self.hold_dh_game2_thread:
+                if othergame.get('doubleheader') and not othergame.get('final'):
+                    if self.log_level>1: print "Holding doubleheader Game",thisgame.get('gamenum'),"until Game",othergame.get('gamenum'),"is final. Sleeping for 5 seconds..."
+                    if self.log_level>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
+                    time.sleep(5)
+                    return False
+            else:
+                while True:
+                    try:
+                        oresponse = urllib2.urlopen(othergame.get('url') + "linescore.json")
+                        break
+                    except:
+                        if self.log_level>0: print "gamecheck couldn't find file for other game, trying again in twenty seconds..."
+                        if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
+                        time.sleep(20)
+                ojsonfile = json.load(oresponse)
+                ogame = ojsonfile.get('data').get('game')
+                otimestring = ogame.get('time_date') + " " + ogame.get('ampm')
+                odate_object = datetime.strptime(otimestring, "%Y/%m/%d %I:%M %p")
+                if self.log_level>2: print "Doubleheader Game 2 start time:",date_object,"; Game 1 start time:",odate_object
+                if odate_object > date_object: #game 1 start time is after game 2 start time
+                    if self.log_level>1: print "Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3 hours for Game 2..."
+                    date_object = odate_object.replace(hour=odate_object.hour+3) #use game 1 start time + 3 hours for game 2 start time
+                    if self.log_level>2: print "Game 2 start time:",date_object,"; Game 1 start time:",odate_object
         while True:
             check = datetime.today()
             if date_object >= check:
                 if (date_object - check).seconds <= self.time_before:
                     return True
                 else:
+                    if self.log_level>2: print "Time to post:",date_object.replace(hour=date_object.hour - self.time_before/60/60)
                     if self.log_level>1: print "Not time to post yet, sleeping for five seconds..."
                     if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p")
                     time.sleep(5)

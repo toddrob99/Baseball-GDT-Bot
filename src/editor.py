@@ -14,7 +14,7 @@ class Editor:
             post_thread_settings,log_level):
         (self.time_zone,self.time_change,) = time_info
         (self.pre_thread_tag, self.pre_thread_time, self.pre_thread_flair,
-            (self.pre_probables, self.pre_first_pitch)
+            (self.pre_probables, self.pre_first_pitch, self.pre_description)
         ) = pre_thread_settings
         (self.thread_tag, self.thread_flair,
             (self.header, self.box_score, 
@@ -69,6 +69,11 @@ class Editor:
     def generate_pre_code(self,d,otherd=False):
         code = ""
 
+        if otherd and int(otherd[-2:-1]) < int(d[-2:-1]):
+            tempd = otherd
+            otherd = d
+            d = tempd
+        
         if otherd:
             code = code + "#Game " + d[-2:-1] + "\n"
 
@@ -78,19 +83,21 @@ class Editor:
         files = self.download_pre_files(temp_dirs)
         if self.pre_probables: code = code + self.generate_pre_probables(files)
         if self.pre_first_pitch: code = code + self.generate_pre_first_pitch(files)
+        code = code + self.generate_pre_description(files)
         code = code + "\n\n"
 
         if otherd:
-            code = code + "#Game " + otherd[-2:-1] + "\n"
+            code = code + "---\n#Game " + otherd[-2:-1] + "\n"
             temp_dirs = []
             temp_dirs.append(otherd + "linescore.json")
             temp_dirs.append(otherd + "gamecenter.xml")
             files = self.download_pre_files(temp_dirs)
             if self.pre_probables: code = code + self.generate_pre_probables(files)
             if self.pre_first_pitch: code = code + self.generate_pre_first_pitch(files)
+            if self.pre_description: code = code + self.generate_pre_description(files)
             code = code + "\n\n"
 
-        if self.log_level>2: print "Returning all code..."
+        if self.log_level>2: print "Returning all pre code..."
         return code
 
     def download_pre_files(self,dirs):
@@ -162,6 +169,18 @@ class Editor:
             if self.log_level>2: print "Missing data for first_pitch, returning empty string..."
             return first_pitch
 
+    def generate_pre_description(self,files):
+        first_pitch = ""
+        try:
+            game = files["linescore"].get('data').get('game')
+            if game.get('description',False):
+                return "**Game Note:** " + game.get('description') + "\n\n"
+            else:
+                if self.log_level>2: print "No game description found, returning empty string..."
+                return ""
+        except:
+            if self.log_level>2: print "Missing data for first_pitch, returning empty string..."
+            return ""
 
     def generate_code(self,dir,thread):
         code = ""
@@ -188,7 +207,7 @@ class Editor:
             if self.post_highlights: code = code + self.generate_highlights(files,self.post_theater_link)
             if self.post_footer: code = code + self.post_footer + "\n\n"
         code = code + self.generate_status(files)
-        if self.log_level>2: print "Returning all code..."
+        if self.log_level>2: print "Returning all",thread,"code..."
         return code
 
 
@@ -223,6 +242,7 @@ class Editor:
             timezone = self.time_zone
             date_object = date_object - t
             header = "**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + "\n\n"
+            if game.get('description',False): header = header + "**Game Note:** " + game.get('description') + "\n\n"
             header = header + "[Preview](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get('gameday_link') + ")\n\n"
             weather = files["plays"].get('data').get('game').get('weather')
             root = files["gamecenter"].getroot()
@@ -258,11 +278,12 @@ class Editor:
                 header = header + ", " + broadcast[1][1].text
             header = header + "|**Notes:** [Away](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[
                 1] + "), [Home](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[0] + ")|\n"
+            if game.get('description',False): header = header + "|**Game Note:## " + game.get('description') + "||\n"
             header = header + "\n\n"
             if self.log_level>2: print "Returning header..."
             return header
         except:
-            if self.log_level>2: print "Missing data for header, returning empty string..."
+            if self.log_level>2: print "Missing data for header, returning partial header or empty string..."
             return header
 
 
@@ -349,7 +370,7 @@ class Editor:
             if self.log_level>2: print "Returning boxscore..."
             return boxscore
         except:
-            if self.log_level>2: print "Missing data for boxscore, returning blank text..."
+            if self.log_level>2: print "Missing data for boxscore, returning empty string..."
             return boxscore
 
 
@@ -396,7 +417,7 @@ class Editor:
             if self.log_level>2: print "Returning linescore..."
             return linescore
         except:
-            if self.log_level>2: print "Missing data for linescore, returning blank text..."
+            if self.log_level>2: print "Missing data for linescore, returning empty string..."
             return linescore
 
 
@@ -443,7 +464,7 @@ class Editor:
             if self.log_level>2: print "Returning scoringplays..."
             return scoringplays
         except:
-            if self.log_level>2: print "Missing data for scoringplays, returning blank text..."
+            if self.log_level>2: print "Missing data for scoringplays, returning empty string..."
             return scoringplays
 
 
@@ -469,7 +490,7 @@ class Editor:
             if self.log_level>2: print "Returning highlight..."
             return highlight
         except:
-            if self.log_level>2: print "Missing data for highlight, returning blank text..."
+            if self.log_level>2: print "Missing data for highlight, returning empty string..."
             return highlight
 
 
@@ -511,7 +532,7 @@ class Editor:
             if self.log_level>2: print "Returning decisions..."
             return decisions
         except:
-            if self.log_level>2: print "Missing data for decisions, returning blank text..."
+            if self.log_level>2: print "Missing data for decisions, returning empty string..."
             return decisions
 
 
@@ -570,10 +591,10 @@ class Editor:
                 if self.log_level>2: print "Returning status..."
                 return status
             else:
-                if self.log_level>2: print "Status not final or postponed, returning blank text..."
+                if self.log_level>2: print "Status not final or postponed, returning empty string..."
                 return status
         except:
-            if self.log_level>2: print "Missing data for status, returning blank text..."
+            if self.log_level>2: print "Missing data for status, returning empty string..."
             return status
 
     def didmyteamwin(self, dir, myteam):
@@ -595,7 +616,7 @@ class Editor:
         elif game.get('away_code') == myteam:
             myteamis = "away"
         else:
-            if self.log_level>2: print "Cannot determine if my team is home or away, returning blank text for whether my team won..."
+            if self.log_level>2: print "Cannot determine if my team is home or away, returning empty string for whether my team won..."
             return myteamwon
         if game.get('status') == "Game Over" or game.get('status') == "Final" or game.get('status') == "Completed Early":
             s = files["linescore"].get('data').get('game')

@@ -278,7 +278,7 @@ class Editor:
                 header = header + ", " + broadcast[1][1].text
             header = header + "|**Notes:** [Away](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[
                 1] + "), [Home](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[0] + ")|\n"
-            if game.get('description',False): header = header + "|**Game Note:## " + game.get('description') + "||\n"
+            if game.get('description',False): header = header + "|**Game Note:** " + game.get('description') + "||\n"
             header = header + "\n\n"
             if self.log_level>2: print "Returning header..."
             return header

@@ -5,7 +5,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.1.0
+### Current Version: 4.1.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -112,7 +112,7 @@ Modules being used:
 ---
 ### Change Log
 
-#### v4.1.0
+#### v4.1.1
 * Fixed message to /u/baseballbot, was failing to generate the shortlink (hotfixed in v4.0.0)
 * Added "Game Note" to pregame thread via new `PRE_THREAD_SETTINGS`:`CONTENT`:`DESCRIPTION` setting (default true), and to game/post thread at the end of the header table. This comes from the "Description" field which included in the MLB data for makeup games, e.g. "Makeup of 5/10 PPD"
 * Added and improved some log entries

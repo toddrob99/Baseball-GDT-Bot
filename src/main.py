@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.1.0'
+        self.VERSION = '4.1.1'
         self.BOT_TIME_ZONE = None
         self.TEAM_TIME_ZONE = None
         self.POST_TIME = None

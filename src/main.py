@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.1.2'
+        self.VERSION = '4.1.3'
         self.BOT_TIME_ZONE = None
         self.TEAM_TIME_ZONE = None
         self.POST_TIME = None
@@ -399,7 +399,7 @@ class Bot:
                     v = v[0:v.index("\"")]
                     directories.append(url + v)
 
-            if len(offday): stale_games = offday
+            if len(offday): stale_games[0] = offday
             else: stale_games = games
             if self.LOG_LEVEL>2: print "stale games:",stale_games
 
@@ -418,7 +418,7 @@ class Bot:
                             if self.LOG_LEVEL>1: print "Game",tk,"marked as other game in doubleheader..."
                 i += 1
             if self.LOG_LEVEL>2: print "games:",games
-            
+
             if len(games) == 0:
                 if self.LOG_LEVEL>1: print "No games today..."
 
@@ -674,7 +674,7 @@ class Bot:
 
                             check = datetime.today()
                             str = edit.generate_code(game['url'],"game")
-                            
+
                             if self.LOG_LEVEL>1: print "Editing thread for Game",k,"..."
                             while True:
                                 try:
@@ -783,16 +783,19 @@ class Bot:
                 check = datetime.today()
                 activegames=0
                 pendinggames=0
+                completedgames=0
                 for  k,game in games.items():
                     if game.get('gamesub') and not game.get('final'):
                         activegames += 1
                     if not game.get('gamesub'):
                         pendinggames += 1
+                    if game.get('postsub') and game.get('final'):
+                        completedgames += 1
 
                 if len(offday):
                     if self.LOG_LEVEL>2: print "offday:",offday
                 if self.LOG_LEVEL>2: print "games:",games
-                if self.LOG_LEVEL>2: print "Active Games:",activegames,"- Pending Games:",pendinggames
+                if self.LOG_LEVEL>2: print "Active Games:",activegames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
 
                 if activegames == 0 and pendinggames == 0:
                     if self.LOG_LEVEL>1: print "All games final for today (or off day), going into end of day loop... "

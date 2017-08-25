@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.1.3'
+        self.VERSION = '4.2.0'
         self.BOT_TIME_ZONE = None
         self.TEAM_TIME_ZONE = None
         self.POST_TIME = None
@@ -102,7 +102,7 @@ class Bot:
             if self.SUBREDDIT == None:
                 fatal_errors.append('Missing SUBREDDIT')
 
-            self.TEAM_CODE = settings.get('TEAM_CODE')
+            self.TEAM_CODE = settings.get('TEAM_CODE').lower()
             if self.TEAM_CODE == None:
                 fatal_errors.append('Missing TEAM_CODE')
 
@@ -359,6 +359,10 @@ class Bot:
         edit = editor.Editor(time_info, self.PRE_THREAD_SETTINGS,
                 self.THREAD_SETTINGS, self.POST_THREAD_SETTINGS, self.LOG_LEVEL)
 
+        if edit.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=self.TEAM_CODE) != self.TEAM_CODE:
+            if self.LOG_LEVEL>0: print "FATAL ERROR: Invalid team code detected:",self.TEAM_CODE,"- use lookup_team_code.py to look up the correct team code; see README.md"
+            return
+
         if self.BOT_TIME_ZONE == 'ET':
             time_before = self.POST_TIME * 60 * 60
         elif self.BOT_TIME_ZONE == 'CT':
@@ -376,6 +380,7 @@ class Bot:
         
         games = {}
         offday = {}
+        threads = {}
 
         while True:
             today = datetime.today()
@@ -388,8 +393,8 @@ class Bot:
                 try:
                     response = urllib2.urlopen(url)
                 except:
-                    if self.LOG_LEVEL>0: print "Couldn't find URL, trying again in twenty seconds..."
-                    time.sleep(20)
+                    if self.LOG_LEVEL>0: print "Couldn't find URL, retrying in 30 seconds..."
+                    time.sleep(30)
 
             html = response.readlines()
             directories = []
@@ -403,12 +408,16 @@ class Bot:
             else: stale_games = games
             if self.LOG_LEVEL>2: print "stale games:",stale_games
 
+            threads = {}
             offday = {}
             othergame = {}
             games = {}
+            activegames = completedgames = previewgames = maxapi = 0
+            skipflag = False
             i = 1
             for u in directories:
-                games[i] = {'url' : u, 'gamenum' : u[-2:-1], 'doubleheader' : False, 'final' : False}
+                games[i] = {'url' : u, 'gamenum' : u[-2:-1], 'doubleheader' : False, 'final' : False, 'status' : edit.get_status(u)}
+                threads[i] = {'game' : '', 'post' : '', 'pre' : ''}
                 if u[-2:-1] != '1':
                     if self.LOG_LEVEL>1: print "Game",i,"detected as doubleheader..."
                     games[i].update({'doubleheader' : True})
@@ -418,6 +427,7 @@ class Bot:
                             if self.LOG_LEVEL>1: print "Game",tk,"marked as other game in doubleheader..."
                 i += 1
             if self.LOG_LEVEL>2: print "games:",games
+            pendinggames = len(games)
 
             if len(games) == 0:
                 if self.LOG_LEVEL>1: print "No games today..."
@@ -483,7 +493,7 @@ class Bot:
 
                         if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
                 except Exception, err:
-                    if self.LOG_LEVEL>0: print err
+                    if self.LOG_LEVEL>0: print "Error posting off day thread:",err
             elif not self.OFFDAY_THREAD and len(games) == 0:
                 if self.LOG_LEVEL>1: print "Off day detected, but off day thread disabled."
 
@@ -524,18 +534,17 @@ class Bot:
                             for submission in subreddit.new():
                                 if submission.title == game.get('pretitle'):
                                     if game.get('doubleheader') and self.CONSOLIDATE_PRE:
-                                        if self.LOG_LEVEL>1: print "Game",k,"Consolidated doubleheader pregame thread already posted, submitting edits..."
+                                        if self.LOG_LEVEL>1: print "Game",k,"consolidated doubleheader pregame thread already posted, submitting edits..."
                                         game.update({'presub' : submission})
                                         game.get('presub').edit(edit.generate_pre_code(game.get('url'),othergame.get('url')))
-                                        if self.LOG_LEVEL>1: print "Edits submitted. Sleeping for ten seconds..."
+                                        if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Edits submitted. Sleeping for 5 seconds..."
                                         game.update({'presub' : submission})
                                     else:
-                                        if self.LOG_LEVEL>1: print "Game",k,"Pregame thread already posted, submitting edits..."
+                                        if self.LOG_LEVEL>1: print "Game",k,"pregame thread already posted, submitting edits..."
                                         game.update({'presub' : submission})
                                         game.get('presub').edit(edit.generate_pre_code(game.get('url')))
-                                        if self.LOG_LEVEL>1: print "Edits submitted. Sleeping for ten seconds..."
-                                    if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
-                                    time.sleep(10)
+                                        if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Edits submitted. Sleeping for 5 seconds..."
+                                    time.sleep(5)
                                     break
                             if not game.get('presub'):
                                 if self.LOG_LEVEL>1: print "Submitting pregame thread for Game",k,"..."
@@ -568,9 +577,8 @@ class Bot:
                                     game.get('presub').mod.suggested_sort(self.SUGGESTED_SORT)
                                     if self.LOG_LEVEL>1: print "Suggested sort set..."
 
-                                if self.LOG_LEVEL>1: print "Sleeping for ten seconds..."
-                                if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
-                                time.sleep(10)
+                                if self.LOG_LEVEL>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Sleeping for 5 seconds..."
+                                time.sleep(5)
 
                             if self.CONSOLIDATE_PRE and game.get('doubleheader'):
                                 if othergame.get('doubleheader'):
@@ -579,26 +587,29 @@ class Bot:
 
                             break
                         except Exception, err:
-                            if self.LOG_LEVEL>0: print err, ": retrying after one minute..."
-                            time.sleep(60)
-                if self.LOG_LEVEL>1: print "Finished posting pregame threads..."
-                if self.LOG_LEVEL>2: print "games:",games
+                            if self.LOG_LEVEL>0: print err, ": retrying after 30 seconds..."
+                            time.sleep(30)
+                if self.LOG_LEVEL>2: print "Finished posting pregame threads..."
+                if self.LOG_LEVEL>3: print "games:",games
+            elif not self.PREGAME_THREAD and len(games):
+                if self.LOG_LEVEL>2: print "Pregame thread disabled..."
 
             if self.LOG_LEVEL>2: print "Generating game thread titles for all games..."
             for k,game in games.items():
-                game.update({'gametitle': edit.generate_title(game['url'],'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
+                game.update({'gametitle': edit.generate_title(game.get('url'),'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
 
             while True:
                 for k,game in games.items():
-                    if self.LOG_LEVEL>1: print "Game",k,"check"
+                    if self.LOG_LEVEL>1 and len(games)>1: print "Game",k,"check"
                     for otherk,othergame in games.items():
                         if othergame.get('url')[:-2] == game.get('url')[:-2] and othergame.get('url') != game.get('url'): break
                     if not othergame.get('doubleheader'): othergame = {}
                     if othergame.get('doubleheader') and othergame.get('final') and not game.get('gamesub'):
                         if self.LOG_LEVEL>2: print "Updating title for doubleheader Game",k,"since Game",otherk,"is final..."
-                        game.update({'gametitle': edit.generate_title(game['url'],'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
-                    if timechecker.gamecheck(game['url'],game,othergame) == True:
-                        if not timechecker.ppcheck(game['url']) and not game.get('final'):
+                        game.update({'gametitle': edit.generate_title(game.get('url'),'game',self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
+                    game.update({'status' : edit.get_status(game.get('url'))})
+                    if timechecker.gamecheck(game.get('url'),game,othergame,activegames+pendinggames) == True:
+                        if not timechecker.ppcheck(game.get('url')) and not game.get('final'):
                             check = datetime.today()
                             try:
                                 subreddit = r.subreddit(self.SUBREDDIT)
@@ -619,17 +630,19 @@ class Bot:
                                             if self.LOG_LEVEL>1: print "Unsticky of stale posts failed, continuing."
                                         stale_games = {}
                                     if game.get('presub') and not game.get('gamesub'):
-                                        if self.LOG_LEVEL>1: print "Unstickying pregame thread..."
+                                        if self.LOG_LEVEL>1: print "Unstickying Game",k,"pregame thread..."
                                         game.get('presub').mod.sticky(state=False)
                                 if not game.get('gamesub'):
                                     for submission in subreddit.new():
                                         if submission.title == game.get('gametitle'):
-                                            if self.LOG_LEVEL>1: print "Game",k,"Thread already posted, getting submission..."
-                                            game.update({'gamesub' : submission})
+                                            if self.LOG_LEVEL>1: print "Game",k,"thread already posted, getting submission..."
+                                            game.update({'gamesub' : submission, 'status' : edit.get_status(game.get('url'))})
+                                            threads[k].update({'game' : submission.selftext})
                                             break
                                 if not game.get('gamesub'):
                                     if self.LOG_LEVEL>1: print "Submitting game thread for Game",k,"..."
-                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=edit.generate_code(game['url'],"game"), send_replies=self.INBOXREPLIES)})
+                                    threads[k].update({'game' : edit.generate_code(game.get('url'),"game")})
+                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=threads[k].get('game'), send_replies=self.INBOXREPLIES), 'status' : edit.get_status(game.get('url'))})
                                     if self.LOG_LEVEL>1: print "Game thread submitted..."
 
                                     if self.STICKY:
@@ -664,80 +677,80 @@ class Bot:
                                         game.get('gamesub').mod.flair(self.THREAD_SETTINGS[1])
                                         if self.LOG_LEVEL>1: print "Submission flaired..."
 
-                                    if self.LOG_LEVEL>1: print "Sleeping for thirty seconds..."
-                                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                    time.sleep(30)
+                                    skipflag=True
+                                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Sleeping for 5 seconds..."
+                                    time.sleep(5)
 
                             except Exception, err:
-                                if self.LOG_LEVEL>0: print err, ": retrying after one minute..."
-                                time.sleep(60)
+                                if self.LOG_LEVEL>0: print "Error while getting/posting game thread: ",err, ": continuing after 10 seconds..."
+                                time.sleep(10)
 
                             check = datetime.today()
-                            str = edit.generate_code(game['url'],"game")
+                            str = edit.generate_code(game.get('url'),"game")
+                            if skipflag: skipflag=False
+                            else:
+                                if str != threads[k].get('game'):
+                                    threads[k].update({'game' : str})
+                                    if self.LOG_LEVEL>2: print "Editing thread for Game",k,"..."
+                                    while True:
+                                        try:
+                                            game.get('gamesub').edit(str)
+                                            if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"edits submitted. Sleeping for 5 seconds..."
+                                            time.sleep(5)
+                                            break
+                                        except Exception, err:
+                                            if self.LOG_LEVEL>0: print datetime.strftime(check, "%d %I:%M:%S %p"),"Couldn't submit edits, retrying in 10 seconds..."
+                                            time.sleep(10)
+                                else:
+                                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"No changes to Game",k,"thread. Sleeping for 5 seconds..."
+                                    time.sleep(5)
 
-                            if self.LOG_LEVEL>1: print "Editing thread for Game",k,"..."
-                            while True:
-                                try:
-                                    game.get('gamesub').edit(str)
-                                    if self.LOG_LEVEL>1: print "Edits submitted..."
-                                    break
-                                except Exception, err:
-                                    if self.LOG_LEVEL>0: print "Couldn't submit edits, retrying in 10 seconds..."
-                                    if self.LOG_LEVEL>0: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                    time.sleep(10)
-
-                            if "|Decisions|" in str:
+                            if "##COMPLETED EARLY" in str:
                                 check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Final..."
-                                game.update({'final' : True})
-                            elif "##COMPLETED EARLY" in str:
-                                check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Completed Early..."
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Completed Early..."
                                 game.update({'final' : True})
                             elif "##FINAL: TIE" in str:
                                 check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Final (Tie)..."
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Final (Tie)..."
                                 game.update({'final' : True})
                             elif "##POSTPONED" in str:
                                 check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Postponed..."
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Postponed..."
                                 game.update({'final' : True})
                             elif "##SUSPENDED" in str:
                                 check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Suspended..."
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Suspended..."
                                 game.update({'final' : True})
                             elif "##CANCELLED" in str:
                                 check = datetime.today()
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                if self.LOG_LEVEL>1: print "Game",k,"Cancelled..."
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Cancelled..."
+                                game.update({'final' : True})
+                            elif "|Decisions|" in str:
+                                check = datetime.today()
+                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"Final..."
                                 game.update({'final' : True})
 
                             if game.get('final'):
                                 if self.POST_GAME_THREAD:
                                     try:
-                                        game.update({'posttitle' : edit.generate_title(game['url'],"post",self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
+                                        game.update({'posttitle' : edit.generate_title(game.get('url'),"post",self.WINLOSS_POST_THREAD_TAGS,self.TEAM_CODE,game.get('doubleheader'),game.get('gamenum'))})
                                         subreddit = r.subreddit(self.SUBREDDIT)
                                         if self.STICKY:
                                             if game.get('presub'):
-                                                if self.LOG_LEVEL>1: print "Unstickying pregame thread..."
+                                                if self.LOG_LEVEL>1: print "Unstickying Game",k,"pregame thread..."
                                                 game.get('presub').mod.sticky(state=False)
                                             if game.get('gamesub'):
-                                                if self.LOG_LEVEL>1: print "Unstickying game thread..."
+                                                if self.LOG_LEVEL>1: print "Unstickying Game",k,"game thread..."
                                                 game.get('gamesub').mod.sticky(state=False)
                                         if not game.get('postsub'):
                                             for submission in subreddit.new():
                                                 if submission.title == game.get('posttitle'):
-                                                    if self.LOG_LEVEL>1: print "Game",k,"Postgame thread already posted, getting submission..."
+                                                    if self.LOG_LEVEL>1: print "Game",k,"postgame thread already posted, getting submission..."
                                                     game.update({'postsub' : submission})
                                                     break
                                         if not game.get('postsub'):
                                             if self.LOG_LEVEL>1: print "Submitting postgame thread for Game",k,"..."
-                                            game.update({'postsub' : subreddit.submit(game.get('posttitle'), selftext=edit.generate_code(game['url'],"post"), send_replies=self.INBOXREPLIES)})
+                                            game.update({'postsub' : subreddit.submit(game.get('posttitle'), selftext=edit.generate_code(game.get('url'),"post"), send_replies=self.INBOXREPLIES)})
                                             if self.LOG_LEVEL>1: print "Postgame thread submitted..."
 
                                             if self.STICKY:
@@ -767,43 +780,49 @@ class Bot:
                                                 game.get('postsub').mod.suggested_sort(self.SUGGESTED_SORT)
                                                 if self.LOG_LEVEL>1: print "Suggested sort set..."
 
-                                            if self.LOG_LEVEL>1: print "Sleeping for thirty seconds..."
-                                            if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                            time.sleep(20)
+                                            if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Sleeping for 5 seconds..."
+                                            time.sleep(5)
                                     except Exception, err:
-                                        if self.LOG_LEVEL>0: print err, ": retrying after one minute..."
-                                        time.sleep(50)
-                                time.sleep(10)
-                            else: 
-                                if self.LOG_LEVEL>1: print "Sleeping for thirty seconds..."
-                                if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                                time.sleep(30)
+                                        if self.LOG_LEVEL>0: print "Error while posting postgame thread:",err, ": continuing after 15 seconds..."
+                                        time.sleep(15)
                         else: 
-                            if self.LOG_LEVEL>1: print "Game",k,"final or postponed, nothing to do... " + datetime.strftime(check, "%d %I:%M:%S %p")
+                            if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"final or postponed, nothing to do... "
                 check = datetime.today()
                 activegames=0
                 pendinggames=0
+                previewgames=0
                 completedgames=0
-                for  k,game in games.items():
-                    if game.get('gamesub') and not game.get('final'):
+                for  sk,sgame in games.items():
+                    if sgame.get('gamesub') and not sgame.get('final'):
                         activegames += 1
-                    if not game.get('gamesub'):
+                        if sgame.get('status') in ['Preview','Pre-Game']:
+                            previewgames += 1
+                    if not sgame.get('gamesub'):
                         pendinggames += 1
-                    if game.get('postsub') and game.get('final'):
+                    if sgame.get('postsub') and sgame.get('final'):
                         completedgames += 1
 
+                if self.LOG_LEVEL>3: print "threads:",threads
                 if len(offday):
-                    if self.LOG_LEVEL>2: print "offday:",offday
-                if self.LOG_LEVEL>2: print "games:",games
-                if self.LOG_LEVEL>2: print "Active Games:",activegames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
+                    if self.LOG_LEVEL>3: print "offday:",offday
+                if self.LOG_LEVEL>3: print "games:",games
+                limits = r.auth.limits
+                if limits.get('used') > maxapi: maxapi = limits.get('used')
+                if self.LOG_LEVEL>2: print "Reddit API Calls:",limits,"- Max usage today:",maxapi
+                if self.LOG_LEVEL>2: print "Active Games:",activegames,"...in Preview/Pre-Game Status:",previewgames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
 
                 if activegames == 0 and pendinggames == 0:
                     if self.LOG_LEVEL>1: print "All games final for today (or off day), going into end of day loop... "
                     break
                 elif pendinggames > 0 and activegames == 0:
-                    if self.LOG_LEVEL>1: print "No games to post yet, sleeping for ten minutes... "
-                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p")
+                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"No game threads to post yet, sleeping for 10 minutes... "
                     time.sleep(600)
+                elif activegames > 0 and previewgames == activegames:
+                    if self.LOG_LEVEL>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game status, sleeping for 5 minutes... "
+                    time.sleep(300)
+                elif limits.get('remaining') < 60:
+                    if self.LOG_LEVEL>0: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Approaching Reddit API rate limit. Taking a 10 second break..."
+                    time.sleep(10)
             if datetime.today().day == today.day:
                 timechecker.endofdaycheck()
 

@@ -5,7 +5,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.1.3
+### Current Version: 4.2.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -39,7 +39,7 @@ The following settings can be configured in `src/settings.json`:
 
 * `SUBREDDIT` - subreddit that you want the threads posted to (do not includ "/r/", e.g. "Phillies")
 
-* `TEAM_CODE` - three letter code that represents team, look this up
+* `TEAM_CODE` - three letter code that represents team - not always what you think (Cubs: CHN, Yankees: NYA)! look this up by running `lookup_team_code.py` and entering the team name (e.g. Phillies, Athletics, Cardinals), name abbreviation (e.g. CHC, STL, CWS), city (e.g. Chicago, Miami, Anaheim)
 
 * `OFFDAY_THREAD` - do you want an off day thread on days when your team does not play? (true/false)
 
@@ -93,7 +93,7 @@ The following settings can be configured in `src/settings.json`:
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 
-* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info, 3 for debug)
+* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info, 3 for debug, 4 for verbose debug)
 ---
 
 If something doesn't seem right, feel free to message me on reddit or post it as a bug on github.
@@ -111,6 +111,24 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.2.0
+* Renamed `setup.py` to `setup_oauth.py`
+* Added github URL to PRAW user agent and added label to refresh token output in `setup_oauth.py`
+* Created `lookup_team_code.py` to help users determine what to use for TEAM_CODE
+* Added `lookup_team_info` function, used it to display the better-known team abbreviation in scoring plays section (e.g. CWS instead of CHA)
+* Added validation of `TEAM_CODE`, with fatal error resulting from invalid code
+* Updated `baseball.theater` link format, will now support doubleheaders
+* Moved check for "Decisions" to end of list to ensure more specific statuses (tie, postponed, etc.) take precedence
+* Added display of Reddit API Calls after each game edit loop, with `LOG_LEVEL` of 3+
+* Added 10 second cool-down betwen game thread edits if getting close to Reddit API rate limit (<10% remaining)
+* Added logic to not edit game thread if code has not changed, reducing the rate of Reddit API calls
+* Reduced sleep between game thread edit checks to 5 seconds
+* Bot will no longer edit game thread immediately after posting
+* Bot will now sleep for 5 minutes if all posted games are in `Preview`/`Pre-Game` status (instead of editing every 10 seconds)
+* Added log level 4 to print game/thread variables between thread updates
+* Additional minor logging improvements
+* Stress-tested bot with 5 concurrent games to confirm Reddit API rate limit would not be reached. The maximum usage was below 20% of the rate limit.
 
 #### v4.1.3
 * Fixed unsticky of stale offday thread the next day

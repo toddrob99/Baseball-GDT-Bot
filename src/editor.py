@@ -47,7 +47,7 @@ class Editor:
                 response = urllib2.urlopen(dir + "linescore.json")
                 break
             except:
-                if self.log_level>0: print "Couldn't find linescore.json for title, trying again..."
+                if self.log_level>0: print "Couldn't find linescore.json for title, trying again in 20 seconds..."
                 time.sleep(20)
         filething = json.load(response)
         game = filething.get('data').get('game')
@@ -427,6 +427,8 @@ class Editor:
             root = files["scores"].getroot()
             scores = root.findall("score")
             currinning = ""
+            hometeam_abbrev = self.lookup_team_info(field="name_abbrev", lookupfield="team_code", lookupval=root.get("home_team"))
+            awayteam_abbrev = self.lookup_team_info(field="name_abbrev", lookupfield="team_code", lookupval=root.get("away_team"))
             scoringplays = scoringplays + "Inning|Scoring Play Description|Score\n"
             scoringplays = scoringplays + ":--|:--|:--\n"
             for s in scores:
@@ -454,9 +456,9 @@ class Editor:
 
                 scoringplays = scoringplays + "|"
                 if int(s.get("home")) < int(s.get("away")):
-                    scoringplays = scoringplays + s.get("away") + "-" + s.get("home") + " " + root.get("away_team").upper()
+                    scoringplays = scoringplays + s.get("away") + "-" + s.get("home") + " " + awayteam_abbrev.upper()
                 elif int(s.get("home")) > int(s.get("away")):
-                    scoringplays = scoringplays + s.get("home") + "-" + s.get("away") + " " + root.get("home_team").upper()
+                    scoringplays = scoringplays + s.get("home") + "-" + s.get("away") + " " + hometeam_abbrev.upper()
                 else:
                     scoringplays = scoringplays + s.get("home") + "-" + s.get("away")
                 scoringplays = scoringplays + "\n"
@@ -484,8 +486,9 @@ class Editor:
                         highlight = highlight + "|[](/MLB)|[" + v.find("headline").text + "](" + v.find("url").text + ")|\n"                     
             if theater_link:
                 game = files["linescore"].get('data').get('game')
-                notes = self.get_notes(game.get('home_team_name'), game.get('away_team_name'))
-                highlight = highlight + "||See all highlights at [Baseball.Theater](http://baseball.theater/team/" + notes[0] + "/game/" + datetime.now().strftime('%Y%m%d') + ")|\n"
+                gamedate = game.get("time_date").split(" ",1)[0].replace("/","")
+                game_pk = game.get("game_pk")
+                highlight = highlight + "||See all highlights at [Baseball.Theater](http://baseball.theater/game/" + gamedate + "/" + game_pk + ")|\n"
             highlight = highlight + "\n\n"
             if self.log_level>2: print "Returning highlight..."
             return highlight
@@ -535,6 +538,14 @@ class Editor:
             if self.log_level>2: print "Missing data for decisions, returning empty string..."
             return decisions
 
+    def get_status(self,url):
+        try:
+            response = urllib2.urlopen(url+"linescore.json")
+            linescore = json.load(response)
+            return linescore.get('data').get('game').get('status')
+        except:
+            return None
+        return None
 
     def generate_status(self,files):
         status = ""
@@ -726,8 +737,22 @@ class Editor:
         notes.append(options[homename])
         notes.append(options[awayname])
         return notes
-        
-        
+
+    def lookup_team_info(self, field="name_abbrev", lookupfield="team_code", lookupval=None):
+        try:
+            response = urllib2.urlopen("http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27")
+            teaminfo = json.load(response)
+        except Exception as e:
+            if self.log_level>1: print e
+            return None
+
+        teamlist = teaminfo.get('team_all').get('queryResults').get('row')
+        for team in teamlist:
+            if team.get(lookupfield,None).lower() == lookupval.lower(): return team.get(field)
+
+        if self.log_level>1: print "Couldn't look up",field,"from",lookupfield,"=",lookupval
+        return None
+
     def get_team(self, team_id):
         team = []
         options = {

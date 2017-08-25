@@ -24,7 +24,7 @@ class TimeCheck:
                 if self.log_level>1: print "Last date check: " + datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(600)
 
-    def gamecheck(self,dir,thisgame={},othergame={}):
+    def gamecheck(self,dir,thisgame={},othergame={},gamecount=1):
         if thisgame.get('gamesub'): return True #game thread is already posted
         while True:
             try:
@@ -32,8 +32,7 @@ class TimeCheck:
                 break
             except:
                 check = datetime.today()
-                if self.log_level>0: print "gamecheck couldn't find file, trying again in twenty seconds..."
-                if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
+                if self.log_level>0: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Gamecheck couldn't find file, trying again in 20 seconds..."
                 time.sleep(20)
         jsonfile = json.load(response)
         game = jsonfile.get('data').get('game')
@@ -42,8 +41,7 @@ class TimeCheck:
         if thisgame.get('doubleheader') and thisgame.get('gamenum')=='2':
             if self.hold_dh_game2_thread:
                 if othergame.get('doubleheader') and not othergame.get('final'):
-                    if self.log_level>1: print "Holding doubleheader Game",thisgame.get('gamenum'),"until Game",othergame.get('gamenum'),"is final. Sleeping for 5 seconds..."
-                    if self.log_level>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
+                    if self.log_level>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Holding doubleheader Game",thisgame.get('gamenum'),"until Game",othergame.get('gamenum'),"is final, sleeping for 5 seconds..."
                     time.sleep(5)
                     return False
             else:
@@ -52,8 +50,7 @@ class TimeCheck:
                         oresponse = urllib2.urlopen(othergame.get('url') + "linescore.json")
                         break
                     except:
-                        if self.log_level>0: print "gamecheck couldn't find file for other game, trying again in twenty seconds..."
-                        if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
+                        if self.log_level>0: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Gamecheck couldn't find file for other game, trying again in 20 seconds..."
                         time.sleep(20)
                 ojsonfile = json.load(oresponse)
                 ogame = ojsonfile.get('data').get('game')
@@ -70,10 +67,10 @@ class TimeCheck:
                 if (date_object - check).seconds <= self.time_before:
                     return True
                 else:
-                    if self.log_level>2: print "Time to post:",date_object.replace(hour=date_object.hour - self.time_before/60/60)
-                    if self.log_level>1: print "Not time to post yet, sleeping for five seconds..."
-                    if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                    time.sleep(5)
+                    if self.log_level>2: print "Time to post game thread:",date_object.replace(hour=date_object.hour - self.time_before/60/60)
+                    if gamecount>1:
+                        if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Not time to post game thread yet, sleeping for 5 seconds..."
+                        time.sleep(5)
                     return False
             else:
                 return True
@@ -84,7 +81,7 @@ class TimeCheck:
         except:
             check = datetime.today()
             if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
-            if self.log_level>0: print "ppcheck Couldn't find file, trying again in twenty seconds..."
+            if self.log_level>0: print "ppcheck Couldn't find file, trying again in 20 seconds..."
             time.sleep(20)
         jsonfile = json.load(response)
         game = jsonfile.get('data').get('game')

@@ -1,11 +1,12 @@
-Baseball Game Thread Bot for Reddit by Todd Roberts
+Baseball Game Thread Bot for Reddit
 =====================================
+Maintained by Todd Roberts
 https://github.com/toddrob99/Baseball-GDT-Bot
 
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.2.0
+### Current Version: 4.3.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -73,7 +74,7 @@ The following settings can be configured in `src/settings.json`:
 	* `PRE_THREAD_TAG` - prefix for the thread title ("PREGAME THREAD:")
 	* `PRE_THREAD_TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
 	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Pregame Thread")
-	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`) - what to include in the body of the post (true/false)
+	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`, `BLURB`) - what to include in the body of the post (true/false)
 
 * `THREAD_SETTINGS` - what to include in game threads
 	* `THREAD_TAG` - prefix for the thread title ("GAME THREAD:")
@@ -82,6 +83,7 @@ The following settings can be configured in `src/settings.json`:
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
+		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts
 	
 * `POST_THREAD_SETTINGS` - what to include in postgame threads
 	* `POST_THREAD_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is false OR game result is tie/postponed/suspended/canceled ("POST GAME THREAD:")
@@ -111,6 +113,19 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.3.0
+* Added `BLURB` pregame thread option and `PREVIEW_BLURB` game thread option, to include game headline and blurb in header (same blurb, but only show in game thread until game starts)
+* Updated to use `self.SETTINGS` dict for settings, instead of separate variables for each setting. Made SETTINGS dict available in editor module. This reduces the likelihood of breakage later when adding/changing settings, as the order no longer matters (in the code; the order never mattered in the settings file)
+* Removed validation of `REFRESH_TOKEN` since it is not used in the code anywhere (only used in `setup-oauth.py`)
+* Fixed `DESCRIPTION` setting not being honored in pregame thread settings
+* Changed the order files are downloaded from MLB servers, in order to make gamecenter.xml available prior to game start
+* Reduced parameters being passed between functions, used `self.SETTINGS` directly instead
+* Removed some redundancy and extra file downloads from the function that determines whether your team won
+* Updated `edit.generate_pre_code` function to take games parameter with gameid, in order to pull data about the games without needing separate parameters
+* Removed extra slashes in URLs in `edit.generate_code` function
+* Moved PRAW instantiation to after timezone and team code validations
+* Added logging of Reddit authentication scopes for log level 3+
 
 #### v4.2.0
 * Renamed `setup.py` to `setup_oauth.py`

@@ -33,7 +33,8 @@
         "CONTENT": {
             "PROBABLES": true,
             "FIRST_PITCH": true,
-            "DESCRIPTION": true
+            "DESCRIPTION": true,
+            "BLURB": true
         }
     },
     "THREAD_SETTINGS": {
@@ -46,7 +47,8 @@
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
             "FOOTER": "**Remember to sort by new to keep up!**",
-            "THEATER_LINK": false
+            "THEATER_LINK": false,
+            "PREVIEW_BLURB": true
         }
     },
     "POST_THREAD_SETTINGS": {

@@ -130,7 +130,7 @@ Modules being used:
 * Updated logic to determine if game is final using `get_status()` instead of checking game thread code
 * Added `EXTRA_SLEEP` option to `GAME_THREAD` settings section to allow bot runners to specify additional wait time between game thread edits (in seconds, default 0)
 * Added validation of authorized reddit.com API scopes for bot user. A warning will be logged if any recommended scopes are missing (`LOG_LEVEL` 2+)
-* Updated `generate_probables()` (renamed from `generate_pre_probables()` to use `gamecenter.xml` for probables data instead of `linescore.json`, because probables data is removed from `linescore.json` after the game exits Preview status
+* Updated `generate_probables()` (renamed from `generate_pre_probables()`) to use `gamecenter.xml` for probables data instead of `linescore.json`, because probables data is removed from `linescore.json` after the game exits Preview status
 * Split up `PROBABLES` table in pregame thread, into `PROBABLES` and new `BROADCAST` setting; added pitcher blurb to `PROBABLES`
 * Added `PREVIEW_PROBABLES` option to `GAME_THREAD` settings. Shows probable pitchers (including blurb) in game thread while game is in Preview status
 * Added validation of `FLAIR` before attempting to set flair for off/pre/game/post threads
@@ -139,7 +139,7 @@ Modules being used:
 #### v4.3.0
 * Added `BLURB` pregame thread option and `PREVIEW_BLURB` game thread option, to include game headline and blurb in header (same blurb, but only show in game thread until game starts)
 * Updated to use `self.SETTINGS` dict for settings, instead of separate variables for each setting. Made SETTINGS dict available in editor module. This reduces the likelihood of breakage later when adding/changing settings, as the order no longer matters (in the code; the order never mattered in the settings file)
-* Removed validation of `REFRESH_TOKEN` since it is not used in the code anywhere (only used in `setup-oauth.py`)
+* Removed validation of `REDIRECT_URI` since it is not used in the code anywhere (only used in `setup-oauth.py`)
 * Fixed `DESCRIPTION` setting not being honored in pregame thread settings
 * Changed the order files are downloaded from MLB servers, in order to make gamecenter.xml available prior to game start
 * Reduced parameters being passed between functions, used `self.SETTINGS` directly instead

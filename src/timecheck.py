@@ -75,18 +75,6 @@ class TimeCheck:
             else:
                 return True
 
-    def ppcheck(self,dir):
-        try:
-            response = urllib2.urlopen(dir + "linescore.json")
-        except:
-            check = datetime.today()
-            if self.log_level>0: print datetime.strftime(check, "%d %I:%M:%S %p")
-            if self.log_level>0: print "ppcheck Couldn't find file, trying again in 20 seconds..."
-            time.sleep(20)
-        jsonfile = json.load(response)
-        game = jsonfile.get('data').get('game')
-        return (game.get('status') == "Postponed")
-
     def pregamecheck(self,pre_time):
         date_object = datetime.strptime(pre_time, "%I%p")
         while True:

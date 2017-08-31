@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.3.0
+### Current Version: 4.4.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -32,78 +32,76 @@ The following settings can be configured in `src/settings.json`:
 
 * `USER_AGENT` - user agent string to identify your bot to the Reddit API - this will be appended to the system-generated user agent (e.g. "implemented for r/Phillies by u/toddrob")
 
+* `SUBREDDIT` - subreddit that you want the threads posted to (do not include "/r/", e.g. "Phillies")
+
+* `TEAM_CODE` - three letter code that represents team - not always what you think (Cubs: CHN, Yankees: NYA)! look this up by running `lookup_team_code.py` and entering the team name (e.g. Phillies, Athletics, Cardinals), name abbreviation (e.g. CHC, STL, CWS), city (e.g. Chicago, Miami, Anaheim)
+
 * `BOT_TIME_ZONE` - time zone of the computer running the bot ("ET", "CT", "MT", "PT")
 
 * `TEAM_TIME_ZONE` - time zone of the team ("ET", "CT", "MT", "PT")
 
-* `POST_TIME` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
-
-* `SUBREDDIT` - subreddit that you want the threads posted to (do not includ "/r/", e.g. "Phillies")
-
-* `TEAM_CODE` - three letter code that represents team - not always what you think (Cubs: CHN, Yankees: NYA)! look this up by running `lookup_team_code.py` and entering the team name (e.g. Phillies, Athletics, Cardinals), name abbreviation (e.g. CHC, STL, CWS), city (e.g. Chicago, Miami, Anaheim)
-
-* `OFFDAY_THREAD` - do you want an off day thread on days when your team does not play? (true/false)
-
-* `PREGAME_THREAD` - do you want a pre game thread? (true/false)
-
-* `CONSOLIDATE_PRE` - do you want to consolidate pre game threads for doubleheaders? (true/false)
-
-* `HOLD_DH_GAME2_THREAD` - do you want to hold the game thread for doubleheader game 2 until game 1 is final? (true/false)
-
-* `POST_GAME_THREAD` - do you want a post game thread? (true/false)
-
 * `STICKY` - do you want the threads stickied? bot must have mod rights. (true/false)
 
-* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+* `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") **NOTE**: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
 
-* `MESSAGE` - send submission shortlink to /u/baseballbot to add a link to the game thread on the /r/Baseball sidebar (true/false)
+* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info (default), 3 for debug, 4 for verbose debug)
 
-* `INBOXREPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+* `OFF_THREAD` - offday thread settings
+	* `ENABLED` - do you want an off day thread on days when your team does not play? (true/false)
+	* `TAG` - prefix for the thread title ("OFF DAY THREAD:")
+	* `TIME` - time to post the offday thread ("8AM" in context of BOT_TIME_ZONE)
+	* `BODY` - text to include in the body of the post ("No game today. Feel free to discuss whatever you want in this thread.")
+	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Off Day Thread")
 
-* `WINLOSS_POST_THREAD_TAGS` - do you want to use different postgame thread tags for wins and losses? (true/false - configure tags in POST_THREAD_SETTINGS)
+* `PRE_THREAD` - pregame thread settings
+	* `ENABLED` - do you want a pre game thread? (true/false)
+	* `TAG` - prefix for the thread title ("PREGAME THREAD:")
+	* `TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
+	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Pregame Thread")
+	* `CONSOLIDATE_DH` - do you want to consolidate pre game threads for doubleheaders? (true/false)
+	* `CONTENT` (`BLURB`, `BROADCAST`, `PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`) - what to include in the body of the post (true/false)
 
-* `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") NOTE: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
-
-* `OFFDAY_THREAD_SETTINGS` - what to include in the offday threads
-	* `OFFDAY_THREAD_TAG` - prefix for the thread title ("OFF DAY THREAD:")
-	* `OFFDAY_THREAD_TIME` - time to post the offday thread ("8AM" in context of BOT_TIME_ZONE)
-	* `OFFDAY_THREAD_BODY` - text to include in the body of the post ("No game today. Feel free to discuss whatever you want in this thread.")
-	* `OFFDAY_THREAD_FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Off Day Thread")
-
-* `PRE_THREAD_SETTINGS` - what to include in the pregame threads
-	* `PRE_THREAD_TAG` - prefix for the thread title ("PREGAME THREAD:")
-	* `PRE_THREAD_TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
-	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Pregame Thread")
-	* `CONTENT` (`PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`, `BLURB`) - what to include in the body of the post (true/false)
-
-* `THREAD_SETTINGS` - what to include in game threads
-	* `THREAD_TAG` - prefix for the thread title ("GAME THREAD:")
-	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Game Thread")
+* `GAME_THREAD` - game thread settings
+	* `TAG` - prefix for the thread title ("GAME THREAD:")
+	* `HOURS_BEFORE` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
+	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Game Thread")
+	* `MESSAGE` - send submission shortlink to /u/baseballbot to add a link to the game thread on the /r/Baseball sidebar (true/false)
+	* `HOLD_DH_GAME2_THREAD` - do you want to hold the game thread for doubleheader game 2 until game 1 is final? (true/false)
+	* `EXTRA_SLEEP` - do you want the bot to sleep longer than 5 seconds between game thread edits? set this to the number of seconds (e.g. 25 for a total sleep of 30 seconds; default: 0)
 	* `CONTENT` - what to include in the body of the post
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
-		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts
-	
-* `POST_THREAD_SETTINGS` - what to include in postgame threads
-	* `POST_THREAD_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is false OR game result is tie/postponed/suspended/canceled ("POST GAME THREAD:")
-	* `POST_THREAD_WIN_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is true AND game result is win ("OUR TEAM WON:")
-	* `POST_THREAD_LOSS_TAG` - prefix for the thread title when `WINLOSS_POST_THREAD_TAGS` is true AND game result is loss ("OUR TEAM LOST:")
-	* `FLAIR` - flair to set on the thread, if FLAIR_MODE is not "none" ("Postgame Thread")
+		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
+		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
+
+* `POST_THREAD` - postgame thread settings
+	* `ENABLED` - do you want a post game thread? (true/false)
+	* `WIN_TAG` - prefix for the thread title when game result is win ("OUR TEAM WON:")
+	* `LOSS_TAG` - prefix for the thread title when game result is loss ("OUR TEAM LOST:")
+	* `OTHER_TAG` - prefix for the thread title when game result is tie/postponed/suspended/canceled ("POST GAME THREAD:")
+	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Postgame Thread")
 	* `CONTENT` - what to include in the body of the post
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 
-* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info, 3 for debug, 4 for verbose debug)
 ---
 
 If something doesn't seem right, feel free to message me on reddit or post it as a bug on github.
-	
+
 This was written in Python 2.7, so beware if you are running Python 3 or
 	above that it may not work correctly. Also make sure you install
 	praw and simplejson before running!
-	
+
 Modules being used:
 
 	praw 5.0.1 - interfacing reddit
@@ -113,6 +111,30 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.4.0
+* Significant changes to settings
+	* Renamed thread settings sections to `OFF_THREAD`, `PRE_THREAD`, `GAME_THREAD`, and `POST_THREAD`
+	* Moved individual `XXXX_THREAD` boolean settings to their respective sections and renamed to `ENABLED` (Note: game thread still cannot be disabled)
+	* Moved/split `SUGGESTED_SORT` and `INBOX_REPLIES` (renamed) into off/pre/game/post thread sections - these can now be set differently for each thread type
+	* Moved `MESSAGE` setting into `GAME_THREAD` section
+	* Shortened names of settings inside off/pre/game/post thread (`TAG`, `TIME`, `BODY` (offday only), and `FLAIR` (change for offday only))
+	* Renamed `POST_TIME` to `HOURS_BEFORE` and moved inside `GAME_THREAD` section
+	* Renamed thread tag settings in `POST_THREAD` section
+	* Moved `LOG_LEVEL` above the thread settings in `sample_settings.json`
+	* Deprecated `WINLOSS_POST_THREAD_TAGS` setting (make all 3 the same if you don't want different tags for wins and losses)
+	* Included temporary support for deprecated settings. Will remove in a later version
+* Updated settings descriptions in `README.md`
+* Removed exception handling around settings load. This will result in a more useful message being displayed if the settings file contains invalid json format or the load fails for another reason that's not handled
+* Changed when user agent is concatenated
+* Updated logic to determine if game is final using `get_status()` instead of checking game thread code
+* Added `EXTRA_SLEEP` option to `GAME_THREAD` settings section to allow bot runners to specify additional wait time between game thread edits (in seconds, default 0)
+* Added validation of authorized reddit.com API scopes for bot user. A warning will be logged if any recommended scopes are missing (`LOG_LEVEL` 2+)
+* Updated `generate_probables()` (renamed from `generate_pre_probables()` to use `gamecenter.xml` for probables data instead of `linescore.json`, because probables data is removed from `linescore.json` after the game exits Preview status
+* Split up `PROBABLES` table in pregame thread, into `PROBABLES` and new `BROADCAST` setting; added pitcher blurb to `PROBABLES`
+* Added `PREVIEW_PROBABLES` option to `GAME_THREAD` settings. Shows probable pitchers (including blurb) in game thread while game is in Preview status
+* Added validation of `FLAIR` before attempting to set flair for off/pre/game/post threads
+* Fixed loop resulting from a postponed game by removing `timechecker.ppcheck()` and letting the overall game status check handle it
 
 #### v4.3.0
 * Added `BLURB` pregame thread option and `PREVIEW_BLURB` game thread option, to include game headline and blurb in header (same blurb, but only show in game thread until game starts)

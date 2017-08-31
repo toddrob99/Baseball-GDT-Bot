@@ -4,42 +4,47 @@
     "REDIRECT_URI": "http://localhost:8080",
     "REFRESH_TOKEN": "XXX",
     "USER_AGENT": "",
-    "BOT_TIME_ZONE": "ET",
-    "TEAM_TIME_ZONE": "ET",
-    "POST_TIME": 3,
     "SUBREDDIT": "XXX",
     "TEAM_CODE": "XXX",
-    "OFFDAY_THREAD": true,
-    "PREGAME_THREAD": true,
-    "CONSOLIDATE_PRE": true,
-    "HOLD_DH_GAME2_THREAD": true,
-    "POST_GAME_THREAD": true,
+    "BOT_TIME_ZONE": "ET",
+    "TEAM_TIME_ZONE": "ET",
     "STICKY": true,
-    "SUGGESTED_SORT": "new",
-    "MESSAGE": false,
-    "INBOXREPLIES": false,
-    "WINLOSS_POST_THREAD_TAGS": false,
     "FLAIR_MODE": "none",
-    "OFFDAY_THREAD_SETTINGS": {
-        "OFFDAY_THREAD_TAG": "OFF DAY THREAD:",
-        "OFFDAY_THREAD_TIME": "9AM",
-        "OFFDAY_THREAD_BODY": "No game today.",
-        "OFFDAY_THREAD_FLAIR": ""
+    "LOG_LEVEL": 2,
+    "OFF_THREAD": {
+        "ENABLED": true,
+        "TAG": "OFF DAY THREAD:",
+        "TIME": "9AM",
+        "BODY": "No game today.",
+        "SUGGESTED_SORT": "new",
+        "INBOX_REPLIES": false,
+        "FLAIR": ""
     },
-    "PRE_THREAD_SETTINGS": {
-        "PRE_THREAD_TAG": "PREGAME THREAD:",
-        "PRE_THREAD_TIME": "9AM",
+    "PRE_THREAD": {
+        "ENABLED": true,
+        "TAG": "PREGAME THREAD:",
+        "TIME": "9AM",
+        "SUGGESTED_SORT": "new",
+        "INBOX_REPLIES": false,
         "FLAIR": "",
+        "CONSOLIDATE_DH": true,
         "CONTENT": {
+            "BLURB": true,
+            "BROADCAST": true,
             "PROBABLES": true,
             "FIRST_PITCH": true,
-            "DESCRIPTION": true,
-            "BLURB": true
+            "DESCRIPTION": true
         }
     },
-    "THREAD_SETTINGS": {
-        "THREAD_TAG": "GAME THREAD:",
+    "GAME_THREAD": {
+        "TAG": "GAME THREAD:",
+        "HOURS_BEFORE": 3,
+        "SUGGESTED_SORT": "new",
+        "INBOX_REPLIES": false,
         "FLAIR": "",
+        "MESSAGE": false,
+        "HOLD_DH_GAME2_THREAD": true,
+        "EXTRA_SLEEP": 0,
         "CONTENT": {
             "HEADER": true,
             "BOX_SCORE": true,
@@ -48,13 +53,17 @@
             "HIGHLIGHTS": true,
             "FOOTER": "**Remember to sort by new to keep up!**",
             "THEATER_LINK": false,
-            "PREVIEW_BLURB": true
+            "PREVIEW_BLURB": true,
+            "PREVIEW_PROBABLES": true
         }
     },
-    "POST_THREAD_SETTINGS": {
-        "POST_THREAD_TAG": "POST GAME THREAD:",
-        "POST_THREAD_WIN_TAG": "OUR TEAM WON:",
-        "POST_THREAD_LOSS_TAG": "OUR TEAM LOST:",
+    "POST_THREAD": {
+        "ENABLED": true,
+        "WIN_TAG": "OUR TEAM WON:",
+        "LOSS_TAG": "OUR TEAM LOST:",
+        "OTHER_TAG": "POST GAME THREAD:",
+        "SUGGESTED_SORT": "new",
+        "INBOX_REPLIES": false,
         "FLAIR": "",
         "CONTENT": {
             "HEADER": true,
@@ -65,6 +74,5 @@
             "FOOTER": "",
             "THEATER_LINK": true
         }
-    },
-    "LOG_LEVEL": 2
+    }
 }

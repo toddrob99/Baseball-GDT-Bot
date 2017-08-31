@@ -15,19 +15,17 @@ class Editor:
         self.SETTINGS = settings
 
     def generate_title(self,dir,thread,dh=False,dhnum=0):
-        if thread == "pre": title = self.SETTINGS.get('PRE_THREAD_SETTINGS').get('PRE_THREAD_TAG') + " "
-        elif thread == "game": title = self.SETTINGS.get('THREAD_SETTINGS').get('THREAD_TAG') + " "
+        if thread == "pre": title = self.SETTINGS.get('PRE_THREAD').get('TAG') + " "
+        elif thread == "game": title = self.SETTINGS.get('GAME_THREAD').get('TAG') + " "
         elif thread == "post":
-            if self.SETTINGS.get('WINLOSS_POST_THREAD_TAGS'):
-                myteamwon = ""
-                myteamwon = self.didmyteamwin(dir)
-                if myteamwon == "0":
-                    title = self.SETTINGS.get('POST_THREAD_SETTINGS').get('POST_THREAD_LOSS_TAG') + " "
-                elif myteamwon == "1":
-                    title = self.SETTINGS.get('POST_THREAD_SETTINGS').get('POST_THREAD_WIN_TAG') + " "
-                else:
-                    title = self.SETTINGS.get('POST_THREAD_SETTINGS').get('POST_THREAD_TAG') + " "
-            else: title = self.SETTINGS.get('POST_THREAD_SETTINGS').get('POST_THREAD_TAG') + " "
+            myteamwon = ""
+            myteamwon = self.didmyteamwin(dir)
+            if myteamwon == "0":
+                title = self.SETTINGS.get('POST_THREAD').get('LOSS_TAG') + " "
+            elif myteamwon == "1":
+                title = self.SETTINGS.get('POST_THREAD').get('WIN_TAG') + " "
+            else:
+                title = self.SETTINGS.get('POST_THREAD').get('OTHER_TAG') + " "
         while True:
             try:
                 response = urllib2.urlopen(dir + "linescore.json")
@@ -45,7 +43,7 @@ class Editor:
         title = title + " - "
         title = title + date_object.strftime("%B %d, %Y")
         if dh:
-            if thread == "pre" and self.SETTINGS.get('CONSOLIDATE_PRE'):
+            if thread == "pre" and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 title = title + " - DOUBLEHEADER"
             else:
                 title = title + " - GAME " + dhnum
@@ -67,11 +65,12 @@ class Editor:
         temp_dirs.append(games[gameid].get('url') + "linescore.json")
         temp_dirs.append(games[gameid].get('url') + "gamecenter.xml")
         files = self.download_pre_files(temp_dirs)
-        if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('BLURB'):
+        if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'):
             code = code + self.generate_blurb(files, self.get_homeaway(self.SETTINGS.get('TEAM_CODE'),games[gameid].get('url')))
-        if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('PROBABLES'): code = code + self.generate_pre_probables(files)
-        if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('FIRST_PITCH'): code = code + self.generate_pre_first_pitch(files)
-        if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('DESCRIPTION'): code = code + self.generate_pre_description(files)
+        if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BROADCAST'): code = code + self.generate_broadcast_info(files)
+        if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code = code + self.generate_probables(files)
+        if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FIRST_PITCH'): code = code + self.generate_pre_first_pitch(files)
+        if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('DESCRIPTION'): code = code + self.generate_pre_description(files)
         code = code + "\n\n"
 
         if othergameid:
@@ -80,11 +79,12 @@ class Editor:
             temp_dirs.append(games[othergameid].get('url') + "linescore.json")
             temp_dirs.append(games[othergameid].get('url') + "gamecenter.xml")
             files = self.download_pre_files(temp_dirs)
-            if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('BLURB'):
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'):
                 code = code + self.generate_blurb(files, self.get_homeaway(self.SETTINGS.get('TEAM_CODE'),games[othergameid].get('url')))
-            if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('PROBABLES'): code = code + self.generate_pre_probables(files)
-            if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('FIRST_PITCH'): code = code + self.generate_pre_first_pitch(files)
-            if self.SETTINGS.get('PRE_THREAD_SETTINGS').get('CONTENT').get('DESCRIPTION'): code = code + self.generate_pre_description(files)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BROADCAST'): code = code + self.generate_broadcast_info(files)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code = code + self.generate_probables(files)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FIRST_PITCH'): code = code + self.generate_pre_first_pitch(files)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('DESCRIPTION'): code = code + self.generate_pre_description(files)
             code = code + "\n\n"
 
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning all pre code..."
@@ -98,44 +98,44 @@ class Editor:
         files["gamecenter"] = ET.parse(response)
         return files
 
-    def generate_pre_probables(self,files):
+    def generate_probables(self,files):
         probables = ""
+        pitchers = {'away' : {},'home' : {}}
         try:
             game = files["linescore"].get('data').get('game')
             subs = self.get_subreddits(game.get('home_team_name'), game.get('away_team_name'))
 
             root = files["gamecenter"].getroot()
-            broadcast = root.find('broadcast')
+            probables_xml = root.find('probables')
+            pitchers['away']['firstname'] = probables_xml.find("away/useName").text
+            pitchers['away']['lastname'] = probables_xml.find("away/lastName").text
+            pitchers['away']['player_id'] = probables_xml.find("away/player_id").text
+            pitchers['away']['wins'] = probables_xml.find("away/wins").text
+            pitchers['away']['losses'] = probables_xml.find("away/losses").text
+            pitchers['away']['era'] = probables_xml.find("away/era").text
+            pitchers['away']['report'] = probables_xml.find("away/report").text
+            pitchers['home']['firstname'] = probables_xml.find("home/useName").text
+            pitchers['home']['lastname'] = probables_xml.find("home/lastName").text
+            pitchers['home']['player_id'] = probables_xml.find("home/player_id").text
+            pitchers['home']['wins'] = probables_xml.find("home/wins").text
+            pitchers['home']['losses'] = probables_xml.find("home/losses").text
+            pitchers['home']['era'] = probables_xml.find("home/era").text
+            pitchers['home']['report'] = probables_xml.find("home/report").text
 
-            if not isinstance(broadcast[0][0].text, type(None)):
-                home_tv_broadcast = broadcast[0][0].text
-            if not isinstance(broadcast[1][0].text, type(None)):
-                away_tv_broadcast = broadcast[1][0].text
-            if not isinstance(broadcast[0][1].text, type(None)):
-                home_radio_broadcast = broadcast[0][1].text
-            if not isinstance(broadcast[1][1].text, type(None)):
-                away_radio_broadcast = broadcast[1][1].text
+            away_pitcher = pitchers['away']['firstname'] + " " + pitchers['away']['lastname']
+            away_pitcher = "[" + away_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['away']['player_id'] + ")"
+            away_pitcher += " (" + pitchers['away']['wins'] + "-" + pitchers['away']['losses'] + ", " + pitchers['away']['era'] + ")"
 
-            away_pitcher_obj = game.get('away_probable_pitcher')
-            home_pitcher_obj = game.get('home_probable_pitcher')
+            home_pitcher = pitchers['home']['firstname'] + " " + pitchers['home']['lastname']
+            home_pitcher = "[" + home_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['home']['player_id'] + ")"
+            home_pitcher += " (" + pitchers['home']['wins'] + "-" + pitchers['home']['losses'] + ", " + pitchers['home']['era'] + ")"
 
-            away_pitcher = away_pitcher_obj.get('first_name') + " " + away_pitcher_obj.get('last_name')
-            away_pitcher = "[" + away_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + away_pitcher_obj.get('id') + ")"
-            away_pitcher += " (" + away_pitcher_obj.get('wins') + "-" + away_pitcher_obj.get('losses') + ", " + away_pitcher_obj.get('era') + ")"
-            home_pitcher = home_pitcher_obj.get('first_name') + " " + home_pitcher_obj.get('last_name')
-            home_pitcher = "[" + home_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + home_pitcher_obj.get('id') + ")"
-            home_pitcher += " (" + home_pitcher_obj.get('wins') + "-" + home_pitcher_obj.get('losses') + ", " + home_pitcher_obj.get('era') + ")"
-
-            away_preview = "[Link](http://mlb.com" + game.get('away_preview_link') + ")"
-            home_preview = "[Link](http://mlb.com" + game.get('home_preview_link') + ")"
-
-            probables  = " |Pitcher|TV|Radio|Preview\n"
-            probables += "-|-|-|-|-\n"
-            probables += "[" + game.get('away_team_name') + "](" + subs[1] + ")|" + away_pitcher + "|" + away_tv_broadcast + "|" + away_radio_broadcast + "|" + away_preview + "\n"
-            probables += "[" + game.get('home_team_name') + "](" + subs[0] + ")|" + home_pitcher + "|" + home_tv_broadcast + "|" + home_radio_broadcast + "|" + home_preview + "\n"
-
+            probables  = " |Pitcher|Report\n"
+            probables += "-|-|-\n"
+            probables += "[" + game.get('away_team_name') + "](" + subs[1] + ")|" + away_pitcher + "|" + pitchers['away']['report'] + "\n"
+            probables += "[" + game.get('home_team_name') + "](" + subs[0] + ")|" + home_pitcher + "|" + pitchers['home']['report'] + "\n"
             probables += "\n"
-            
+
             return probables
         except:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for probables, returning empty string..."
@@ -170,6 +170,39 @@ class Editor:
         except:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for first_pitch, returning empty string..."
             return ""
+
+    def generate_broadcast_info(self,files):
+        broadcast_text = ""
+        try:
+            game = files["linescore"].get('data').get('game')
+            subs = self.get_subreddits(game.get('home_team_name'), game.get('away_team_name'))
+
+            root = files["gamecenter"].getroot()
+            broadcast = root.find('broadcast')
+
+            if not isinstance(broadcast[0][0].text, type(None)):
+                home_tv_broadcast = broadcast[0][0].text
+            if not isinstance(broadcast[1][0].text, type(None)):
+                away_tv_broadcast = broadcast[1][0].text
+            if not isinstance(broadcast[0][1].text, type(None)):
+                home_radio_broadcast = broadcast[0][1].text
+            if not isinstance(broadcast[1][1].text, type(None)):
+                away_radio_broadcast = broadcast[1][1].text
+
+            away_preview = "[Link](http://mlb.com" + game.get('away_preview_link') + ")"
+            home_preview = "[Link](http://mlb.com" + game.get('home_preview_link') + ")"
+
+            broadcast_text  = " |TV|Radio|Preview\n"
+            broadcast_text += "-|-|-|-\n"
+            broadcast_text += "[" + game.get('away_team_name') + "](" + subs[1] + ")|" + away_tv_broadcast + "|" + away_radio_broadcast + "|" + away_preview + "\n"
+            broadcast_text += "[" + game.get('home_team_name') + "](" + subs[0] + ")|" + home_tv_broadcast + "|" + home_radio_broadcast + "|" + home_preview + "\n"
+            broadcast_text += "\n"
+
+            return broadcast_text
+        except:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for broadcast, returning empty string..."
+            return broadcast_text
+        return None
 
     def generate_blurb(self,files,homeaway='mlb'):
         blurb = ""
@@ -217,19 +250,19 @@ class Editor:
         dirs.append(dir + "media/mobile.xml")
         files = self.download_files(dirs)
         if thread == "game":
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('BOX_SCORE'): code = code + self.generate_boxscore(files)
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('THEATER_LINK'))
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('FOOTER') + "\n\n"
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('BOX_SCORE'): code = code + self.generate_boxscore(files)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK'))
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
         elif thread == "post":
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('BOX_SCORE'): code = code + self.generate_boxscore(files)
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('THEATER_LINK'))
-            if self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('POST_THREAD_SETTINGS').get('CONTENT').get('FOOTER') + "\n\n"
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('BOX_SCORE'): code = code + self.generate_boxscore(files)
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('POST_THREAD').get('CONTENT').get('THEATER_LINK'))
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
         code = code + self.generate_status(files)
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning all",thread,"code..."
         return code
@@ -268,7 +301,8 @@ class Editor:
                 myteamis = "home"
             elif game.get('away_code') == self.SETTINGS.get('TEAM_CODE'):
                 myteamis = "away"
-            if self.SETTINGS.get('THREAD_SETTINGS').get('CONTENT').get('PREVIEW_BLURB'): header = self.generate_blurb(files,myteamis)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): header = header + self.generate_blurb(files,myteamis)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES'): header = header + self.generate_probables(files)
             header = header + "**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + "\n\n"
             if game.get('description',False): header = header + "**Game Note:** " + game.get('description') + "\n\n"
             header = header + "[Preview](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get('gameday_link') + ")\n\n"

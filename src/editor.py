@@ -58,13 +58,18 @@ class Editor:
             othergameid = gameid
             gameid = tempgameid
         
-        if othergameid:
-            code = code + "#Game " + games[gameid].get('gamenum') + "\n"
-
         temp_dirs = []
         temp_dirs.append(games[gameid].get('url') + "linescore.json")
         temp_dirs.append(games[gameid].get('url') + "gamecenter.xml")
         files = self.download_pre_files(temp_dirs)
+        game = files["linescore"].get('data').get('game')
+        homecode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('home_code'))
+        awaycode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('away_code'))
+        if othergameid:
+            code += "##[Game " + games[gameid].get('gamenum') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)\n"
+        else:
+            code += "##[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)\n"
+        
         if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'):
             code = code + self.generate_blurb(files, self.get_homeaway(self.SETTINGS.get('TEAM_CODE'),games[gameid].get('url')))
         if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BROADCAST'): code = code + self.generate_broadcast_info(files)
@@ -74,7 +79,7 @@ class Editor:
         code = code + "\n\n"
 
         if othergameid:
-            code = code + "---\n#Game " + games[othergameid].get('gamenum') + "\n"
+            code = code + "---\n##Game " + games[othergameid].get('gamenum') + "\n"
             temp_dirs = []
             temp_dirs.append(games[othergameid].get('url') + "linescore.json")
             temp_dirs.append(games[othergameid].get('url') + "gamecenter.xml")
@@ -255,6 +260,7 @@ class Editor:
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK'))
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE'): code = code + self.generate_current_state(files)
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
         elif thread == "post":
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
@@ -301,47 +307,53 @@ class Editor:
                 myteamis = "home"
             elif game.get('away_code') == self.SETTINGS.get('TEAM_CODE'):
                 myteamis = "away"
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): header = header + self.generate_blurb(files,myteamis)
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES'): header = header + self.generate_probables(files)
-            header = header + "**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + "\n\n"
-            if game.get('description',False): header = header + "**Game Note:** " + game.get('description') + "\n\n"
-            header = header + "[Preview](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get('gameday_link') + ")\n\n"
+            homecode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('home_code'))
+            awaycode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('away_code'))
+            matchup = "[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)"
+            if game.get('status') in ['Preview', 'Pre-Game']:
+                header += "##" + matchup + "\n"
+                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): header += self.generate_blurb(files,myteamis)
+                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES'): header += self.generate_probables(files)
+                if game.get('status') == 'Preview': header += "**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + "\n\n"
+                if game.get('description',False) and game.get('status') == 'Preview': header += "**Game Note:** " + game.get('description') + "\n\n"
+                if game.get('status') == 'Preview': header += "[Preview](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get('gameday_link') + ")\n\n"
+                header += "\n"
             weather = files["plays"].get('data').get('game').get('weather')
             root = files["gamecenter"].getroot()
             broadcast = root.find('broadcast')
             notes = self.get_notes(game.get('home_team_name'), game.get('away_team_name'))
-            header = "|Game Info|Links|\n"
-            header = header + "|:--|:--|\n"
-            header = header + "|**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + " @ " + game.get(
+            header += "|" + matchup + " Game Info|Links|\n"
+            header += "|:--|:--|\n"
+            header += "|**First Pitch:** " + date_object.strftime("%I:%M %p ") + timezone + " @ " + game.get(
                 'venue') + "|[Gameday](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get(
                 'gameday_link') + ")|\n"
-            header = header + "|**Weather:** " + weather.get('condition') + ", " + weather.get(
+            header += "|**Weather:** " + weather.get('condition') + ", " + weather.get(
                 'temp') + " F, " + "Wind " + weather.get('wind')
             if "Y" in game.get('double_header_sw') or "S" in game.get('double_header_sw'):
-                header = header + "|[Game Graph](http://www.fangraphs.com/livewins.aspx?date=" + date_object.strftime(
+                header += "|[Game Graph](http://www.fangraphs.com/livewins.aspx?date=" + date_object.strftime(
                     "%Y-%m-%d") + "&team=" + game.get('home_team_name') + "&dh=" + game.get(
                     'game_nbr') + "&season=" + date_object.strftime("%Y") + ")|\n"
             else:
-                header = header + "|[Game Graph](http://www.fangraphs.com/livewins.aspx?date=" + date_object.strftime(
+                header += "|[Game Graph](http://www.fangraphs.com/livewins.aspx?date=" + date_object.strftime(
                     "%Y-%m-%d") + "&team=" + game.get('home_team_name') + "&dh=0&season=" + date_object.strftime(
                     "%Y") + ")|\n"
-            header = header + "|**TV:** "
+            header += "|**TV:** "
             if not isinstance(broadcast[0][0].text, type(None)):
-                header = header + broadcast[0][0].text
+                header += broadcast[0][0].text
             if not isinstance(broadcast[1][0].text, type(None)):
-                header = header + ", " + broadcast[1][0].text
-            header = header + "|[Strikezone Map](http://www.brooksbaseball.net/pfxVB/zoneTrack.php?month=" + date_object.strftime(
+                header += ", " + broadcast[1][0].text
+            header += "|[Strikezone Map](http://www.brooksbaseball.net/pfxVB/zoneTrack.php?month=" + date_object.strftime(
                 "%m") + "&day=" + date_object.strftime("%d") + "&year=" + date_object.strftime(
                 "%Y") + "&game=gid_" + game.get('gameday_link') + "%2F)|\n"
-            header = header + "|**Radio:** "
+            header += "|**Radio:** "
             if not isinstance(broadcast[0][1].text, type(None)):
-                header = header + broadcast[0][1].text
+                header += broadcast[0][1].text
             if not isinstance(broadcast[1][1].text, type(None)):
-                header = header + ", " + broadcast[1][1].text
-            header = header + "|**Notes:** [Away](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[
+                header += ", " + broadcast[1][1].text
+            header += "|**Notes:** [Away](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[
                 1] + "), [Home](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + notes[0] + ")|\n"
-            if game.get('description',False): header = header + "|**Game Note:** " + game.get('description') + "||\n"
-            header = header + "\n\n"
+            if game.get('description',False): header += "|**Game Note:** " + game.get('description') + "||\n"
+            header += "\n\n"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning header..."
             return header
         except:
@@ -439,6 +451,9 @@ class Editor:
         try:
             game = files["linescore"].get('data').get('game')
             subreddits = self.get_subreddits(game.get('home_team_name'), game.get('away_team_name'))
+            if game.get('status') in ['Preview','Pre-Game']:
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning linescore (none)..."
+                return linescore
             lineinfo = game.get('linescore')
             innings = len(lineinfo) if len(lineinfo) > 9 else 9
             linescore = linescore + "Linescore|"
@@ -490,40 +505,44 @@ class Editor:
             awayteam_abbrev = self.lookup_team_info(field="name_abbrev", lookupfield="team_code", lookupval=root.get("away_team"))
             scoringplays = scoringplays + "Inning|Scoring Play Description|Score\n"
             scoringplays = scoringplays + ":--|:--|:--\n"
-            for s in scores:
-                if s.get("top_inning") == "Y":
-                    inningcheck = "Top "
-                else:
-                    inningcheck = "Bottom "
-                inningcheck = inningcheck + s.get("inn") + "|"
-                if inningcheck != currinning:
-                    currinning = inningcheck
-                    scoringplays = scoringplays + currinning
-                else:
-                    scoringplays = scoringplays + " |"
-
-                actions = s.findall("action")
-                try:
-                    if s.find('atbat').get('score') == "T":
-                        scoringplays = scoringplays + s.find('atbat').get('des')
-                    elif s.find('action').get("score") == "T":
-                        scoringplays = scoringplays + s.find('action').get('des')
+            if len(scores) == 0:
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning scoringplays (none)..."
+                return ""
+            else:
+                for s in scores:
+                    if s.get("top_inning") == "Y":
+                        inningcheck = "Top "
                     else:
-                        scoringplays = scoringplays + s.get('pbp')
-                except:
-                    scoringplays = scoringplays + "Scoring play description currently unavailable."
+                        inningcheck = "Bottom "
+                    inningcheck = inningcheck + s.get("inn") + "|"
+                    if inningcheck != currinning:
+                        currinning = inningcheck
+                        scoringplays = scoringplays + currinning
+                    else:
+                        scoringplays = scoringplays + " |"
 
-                scoringplays = scoringplays + "|"
-                if int(s.get("home")) < int(s.get("away")):
-                    scoringplays = scoringplays + s.get("away") + "-" + s.get("home") + " " + awayteam_abbrev.upper()
-                elif int(s.get("home")) > int(s.get("away")):
-                    scoringplays = scoringplays + s.get("home") + "-" + s.get("away") + " " + hometeam_abbrev.upper()
-                else:
-                    scoringplays = scoringplays + s.get("home") + "-" + s.get("away")
-                scoringplays = scoringplays + "\n"
-            scoringplays = scoringplays + "\n\n"
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning scoringplays..."
-            return scoringplays
+                    actions = s.findall("action")
+                    try:
+                        if s.find('atbat').get('score') == "T":
+                            scoringplays = scoringplays + s.find('atbat').get('des')
+                        elif s.find('action').get("score") == "T":
+                            scoringplays = scoringplays + s.find('action').get('des')
+                        else:
+                            scoringplays = scoringplays + s.get('pbp')
+                    except:
+                        scoringplays = scoringplays + "Scoring play description currently unavailable."
+
+                    scoringplays = scoringplays + "|"
+                    if int(s.get("home")) < int(s.get("away")):
+                        scoringplays = scoringplays + s.get("away") + "-" + s.get("home") + " " + awayteam_abbrev.upper()
+                    elif int(s.get("home")) > int(s.get("away")):
+                        scoringplays = scoringplays + s.get("home") + "-" + s.get("away") + " " + hometeam_abbrev.upper()
+                    else:
+                        scoringplays = scoringplays + s.get("home") + "-" + s.get("away")
+                    scoringplays = scoringplays + "\n"
+                scoringplays = scoringplays + "\n\n"
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning scoringplays..."
+                return scoringplays
         except:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for scoringplays, returning empty string..."
             return scoringplays
@@ -553,6 +572,62 @@ class Editor:
         except:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for highlight, returning empty string..."
             return highlight
+
+    def generate_current_state(self,files):
+        current_state = ""
+        try:
+            game = files["linescore"].get('data').get('game')
+            if game.get('status') != 'In Progress':
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Game status is not In Progress, returning returning empty string for current_state..."
+                return current_state
+            else:
+                topbottom = game.get('inning_state') + " of the "
+                ordinal = lambda n: str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(10<=n%100<=20 and n or n % 10, 'th')
+                inning = ordinal(int(game.get('inning')))
+                current_state += topbottom + inning
+                
+                if game.get('outs') == '3':
+                    if inning == 'Middle of the 7th': current_state = "Seventh inning stretch"
+                    dueup = game.get('due_up_batter').get('first_name') + " " + game.get('due_up_batter').get('last_name')
+                    current_state += " with " + dueup
+                    
+                    ondeck = game.get('due_up_ondeck').get('first_name') + " " + game.get('due_up_ondeck').get('last_name')
+                    current_state += ", " + ondeck
+                    
+                    inhole = game.get('due_up_inhole').get('first_name') + " " + game.get('due_up_inhole').get('last_name')
+                    current_state += ", and " + inhole
+
+                    teamcomingup = game.get('home_team_name') if game.get('inning_state')=='Middle' else game.get('away_team_name')
+                    current_state += " coming up for the " + teamcomingup + "."
+                else:                
+                    runner_desc = {'0': 'bases empty', '1' : 'runner on first', '2' : 'runner on second', '3' : 'runner on third', '4' : 'runners on first and second', '5' : 'runners on first and third', '6' : 'runners on second and third', '7' : 'bases loaded'}
+                    runners = runner_desc[game.get('runner_on_base_status')]
+                    current_state += ", " + runners
+                                    
+                    outs = game.get('outs')
+                    outs += " out" if outs=='1' else " outs"
+                    current_state += ", " + outs
+                    
+                    count = game.get('balls') + "-" + game.get('strikes')
+                    current_state += ", and a count of " + count
+                    
+                    atbat = game.get('current_batter').get('first_name') + " " + game.get('current_batter').get('last_name')
+                    current_state += " with " + atbat + " batting"
+                    
+                    pitcher = game.get('current_pitcher').get('first_name') + " " + game.get('current_pitcher').get('last_name')
+                    current_state += " and " + pitcher + " pitching."
+                    
+                    ondeck = game.get('current_ondeck').get('first_name') + " " + game.get('current_ondeck').get('last_name')
+                    current_state += " " + ondeck + " is on deck"
+                    
+                    inhole = game.get('current_inhole').get('first_name') + " " + game.get('current_inhole').get('last_name')
+                    current_state += ", and " + inhole + " is in the hole."
+                
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning current_state..."
+            return current_state + "\n\n"
+        except:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for current_state, returning empty string..."
+            return current_state
 
     def generate_decisions(self,files):
         decisions = ""

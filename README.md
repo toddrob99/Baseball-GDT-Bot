@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.4.0
+### Current Version: 4.4.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -75,7 +75,7 @@ The following settings can be configured in `src/settings.json`:
 	* `HOLD_DH_GAME2_THREAD` - do you want to hold the game thread for doubleheader game 2 until game 1 is final? (true/false)
 	* `EXTRA_SLEEP` - do you want the bot to sleep longer than 5 seconds between game thread edits? set this to the number of seconds (e.g. 25 for a total sleep of 30 seconds; default: 0)
 	* `CONTENT` - what to include in the body of the post
-		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
+		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS`, `CURRENT_STATE`, `UPDATE_STAMP` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
@@ -104,13 +104,24 @@ This was written in Python 2.7, so beware if you are running Python 3 or
 
 Modules being used:
 
-	praw 5.0.1 - interfacing reddit
+	praw 5.0.1+ - interfacing reddit
 	simplejson - JSON parsing
 	urllib2 - pulling data from MLB servers
 	ElementTree - XML parsing
 
 ---
 ### Change Log
+
+#### v4.4.1
+* Tested with PRAW 5.1.0 - no changes required; updated README to indicate praw 5.0.1+ is supported.
+* Added `CURRENT_STATE` setting to `GAME_THREAD` : `CONTENT` section. This will output the current state of the game while game is in progress. For example: "Top of the 4th, bases empty, 1 out, and a count of 2-1 with Edwin Encarnacion batting and Matthew Boyd pitching. Carlos Santana is on deck, and Yandy Diaz is in the hole." or at the end/middle of an inning (except end of game), "Middle of the 3rd with JaCoby Jones, Jose Iglesias, and Ian Kinsler coming up for the Tigers."
+* Added Last Updated timestamp to end of game thread. Turn off with `GAME_THREAD` : `CONTENT` : `UPDATE_STAMP` = false.
+* Moved end-of-game status check before game thread is updated, to ensure the game thread gets updated with the final result in cases where the MLB data changes to final while the bot is sleeping after editing the game thread.
+* Added matchup at top of pre/game/post threads with link to matchup image (e.g. "Phillies @ Marlins", except consolidated doubleheader pre threads, in which case the "Game 1" header will be the link). It will be the header while the game is in Preview status, and then it will be in the "Game Info" table header (instead of saying Game Info, it will say Phillies @ Marlins Game Info). This link will set the thumbnail for mobile to an image such as http://mlb.mlb.com/images/2017_ipad/684/phimia_684.jpg.
+* Added check for Preview/Pre-Game status to display preview blurb/probables in game thread, rather than overwriting header content when plays.json becomes available
+* Game thread will no longer include header row for scoring plays table if there are no scoring plays
+* Changed "Game X" headers from h1 to h2 in consolidated pre threads
+* Line score table will no longer show in game thread while game is in Preview/Pre-Game status
 
 #### v4.4.0
 * Significant changes to settings

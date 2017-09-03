@@ -51,7 +51,9 @@
             "LINE_SCORE": true,
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
+            "CURRENT_STATE": true,
             "FOOTER": "**Remember to sort by new to keep up!**",
+            "UPDATE_STAMP": true,
             "THEATER_LINK": false,
             "PREVIEW_BLURB": true,
             "PREVIEW_PROBABLES": true

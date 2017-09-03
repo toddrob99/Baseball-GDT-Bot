@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.4.0'
+        self.VERSION = '4.4.1'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -249,8 +249,8 @@ class Bot:
                     warnings.append('Found deprecated setting THREAD_SETTINGS. Please move this to GAME_THREAD. See README.md and sample_settings.json.')
                     self.SETTINGS.update({'GAME_THREAD' : self.SETTINGS.pop('THREAD_SETTINGS')})
                 else:
-                    warnings.append('Missing GAME_THREAD, using defaults (TAG: "GAME THREAD:", HOURS_BEFORE: 3, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", MESSAGE: false, HOLD_DH_GAME2_THREAD: true, EXTRA_SLEEP: 0, HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "**Remember to sort by new to keep up!**", THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true)...')
-                    self.SETTINGS.update({'GAME_THREAD' : {'TAG' : 'GAME THREAD:', 'HOURS_BEFORE' : 3, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'MESSAGE' : False, 'HOLD_DH_GAME2_THREAD' : True, 'EXTRA_SLEEP' : 0, 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True}}})
+                    warnings.append('Missing GAME_THREAD, using defaults (TAG: "GAME THREAD:", HOURS_BEFORE: 3, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", MESSAGE: false, HOLD_DH_GAME2_THREAD: true, EXTRA_SLEEP: 0, HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, CURRENT_STATE: true, FOOTER: "**Remember to sort by new to keep up!**", UPDATE_STAMP: true, THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true)...')
+                    self.SETTINGS.update({'GAME_THREAD' : {'TAG' : 'GAME THREAD:', 'HOURS_BEFORE' : 3, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'MESSAGE' : False, 'HOLD_DH_GAME2_THREAD' : True, 'EXTRA_SLEEP' : 0, 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'CURRENT_STATE' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'UPDATE_STAMP' : True, 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True}}})
 
             if self.SETTINGS.get('GAME_THREAD').get('TAG') == None:
                 if self.SETTINGS.get('GAME_THREAD').get('THREAD_TAG') != None:
@@ -338,9 +338,17 @@ class Bot:
                 warnings.append('Missing GAME_THREAD : CONTENT : HIGHLIGHTS, using default (true)...')
                 self.SETTINGS['GAME_THREAD']['CONTENT'].update({'HIGHLIGHTS' : True})
 
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE') == None:
+                warnings.append('Missing GAME_THREAD : CONTENT : CURRENT_STATE, using default (true)...')
+                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'CURRENT_STATE' : True})
+
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER') == None:
                 warnings.append('Missing GAME_THREAD : CONTENT : FOOTER, using default ("**Remember to sort by new to keep up!**")...')
                 self.SETTINGS['GAME_THREAD']['CONTENT'].update({'FOOTER' : "**Remember to sort by new to keep up!**"})
+
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP') == None:
+                warnings.append('Missing GAME_THREAD : CONTENT : UPDATE_STAMP, using default (true)...')
+                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'UPDATE_STAMP' : True})
 
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK') == None:
                 warnings.append('Missing GAME_THREAD : CONTENT : THEATER_LINK, using default (false)...')
@@ -808,7 +816,11 @@ class Bot:
                                 if not game.get('gamesub'):
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print "Submitting game thread for Game",k,"..."
                                     threads[k].update({'game' : edit.generate_code(game.get('url'),"game")})
-                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=threads[k].get('game'), send_replies=self.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES')), 'status' : edit.get_status(game.get('url'))})
+                                    if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): 
+                                        lastupdate = "^^^Last ^^^Updated: ^^^" + datetime.strftime(datetime.today(), "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^") + self.SETTINGS.get('BOT_TIME_ZONE')
+                                    else: lastupdate = ""
+                                    threadtext = threads[k].get('game') + lastupdate
+                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=threadtext, send_replies=self.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES')), 'status' : edit.get_status(game.get('url'))})
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print "Game thread submitted..."
 
                                     if self.SETTINGS.get('STICKY'):
@@ -861,12 +873,14 @@ class Bot:
                             check = datetime.today()
                             if skipflag: skipflag=False
                             else:
+                                game.update({'status' : edit.get_status(game.get('url'))})
                                 str = edit.generate_code(game.get('url'),"game")
                                 if str != threads[k].get('game'):
                                     threads[k].update({'game' : str})
                                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Editing thread for Game",k,"..."
                                     while True:
                                         try:
+                                            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): str += "^^^Last ^^^Updated: ^^^" + datetime.strftime(datetime.today(), "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^") + self.SETTINGS.get('BOT_TIME_ZONE')
                                             game.get('gamesub').edit(str)
                                             sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                             if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"edits submitted. Sleeping for",sleeptime,"seconds..."
@@ -879,8 +893,6 @@ class Bot:
                                     sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"No changes to Game",k,"thread. Sleeping for",sleeptime,"seconds..."
                                     time.sleep(sleeptime)
-
-                            game.update({'status' : edit.get_status(game.get('url'))})
 
                             if game.get('status') in ['Final','Game Over','Completed Early','Postponed','Suspended','Cancelled']:
                                 check = datetime.today()

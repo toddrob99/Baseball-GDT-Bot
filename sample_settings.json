@@ -15,10 +15,11 @@
         "ENABLED": true,
         "TAG": "OFF DAY THREAD:",
         "TIME": "9AM",
-        "BODY": "No game today.",
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
-        "FLAIR": ""
+        "FLAIR": "",
+        "SUPPRESS_OFFSEASON": true,
+        "FOOTER": "No game today. Feel free to discuss whatever you want in this thread."
     },
     "PRE_THREAD": {
         "ENABLED": true,
@@ -56,7 +57,8 @@
             "UPDATE_STAMP": true,
             "THEATER_LINK": false,
             "PREVIEW_BLURB": true,
-            "PREVIEW_PROBABLES": true
+            "PREVIEW_PROBABLES": true,
+            "NEXT_GAME": true
         }
     },
     "POST_THREAD": {
@@ -74,7 +76,8 @@
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
             "FOOTER": "",
-            "THEATER_LINK": true
+            "THEATER_LINK": true,
+            "NEXT_GAME": true
         }
     }
 }

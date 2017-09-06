@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.4.1
+### Current Version: 4.4.2
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -50,10 +50,11 @@ The following settings can be configured in `src/settings.json`:
 	* `ENABLED` - do you want an off day thread on days when your team does not play? (true/false)
 	* `TAG` - prefix for the thread title ("OFF DAY THREAD:")
 	* `TIME` - time to post the offday thread ("8AM" in context of BOT_TIME_ZONE)
-	* `BODY` - text to include in the body of the post ("No game today. Feel free to discuss whatever you want in this thread.")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Off Day Thread")
+	* `SUPPRESS_OFFSEASON` - do you want to suppress off day threads during the off season? (true/false)
+	* `FOOTER` - text to include in the body of the post, below the next game info ("No game today. Feel free to discuss whatever you want in this thread.")
 
 * `PRE_THREAD` - pregame thread settings
 	* `ENABLED` - do you want a pre game thread? (true/false)
@@ -80,6 +81,7 @@ The following settings can be configured in `src/settings.json`:
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
 		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
+		* `NEXT_GAME` - include next game date/time/opponent in the game thread after the game is final (true/false)
 
 * `POST_THREAD` - postgame thread settings
 	* `ENABLED` - do you want a post game thread? (true/false)
@@ -93,6 +95,7 @@ The following settings can be configured in `src/settings.json`:
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
+		* `NEXT_GAME` - include next game date/time/opponent in the postgame thread (true/false)
 
 ---
 
@@ -111,6 +114,17 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.4.2
+* Added `SUPPRESS_OFFSEASON` setting under `OFF_THREAD` section. Default is true, which will suppress off day threads during the off season (when there are no games in the next 14 days, or when there have been no games in the last 14 days)
+* Added `next_game()` and `last_game()` functions to support suppression of off day threads during the off season
+* Added check for games before generating game thread titles or entering game thread post/edit loop
+* Re-ordered off thread settings validation to match order in sample settings file
+* Added info about next game to off thread body
+* Added `get_teams_time()` function to pull home/away team names/codes and game time for an arbitrary game URL, to facilitate pulling info about the next game for offday threads
+* Renamed `BODY` to `FOOTER` in `OFF_THREAD` settings to match other threads, since it is now optional and will be below info about the next game
+* Added info about next game to game thread (when final) and post thread. Turn off with new `NEXT_GAME` setting under `GAME_THREAD` : `CONTENT` and `POST_THREAD` : `CONTENT` sections
+* Added `generate_next_game()` function to support next game info in off, game, and post threads
 
 #### v4.4.1
 * Tested with PRAW 5.1.0 - no changes required; updated README to indicate praw 5.0.1+ is supported.

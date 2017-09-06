@@ -261,6 +261,7 @@ class Editor:
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK'))
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE'): code = code + self.generate_current_state(files)
+            code += self.generate_status(files,include_next_game=self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('NEXT_GAME'))
             if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
         elif thread == "post":
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HEADER'): code = code + self.generate_header(files)
@@ -268,8 +269,8 @@ class Editor:
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('LINE_SCORE'): code = code + self.generate_linescore(files)
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('SCORING_PLAYS'): code = code + self.generate_scoring_plays(files)
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HIGHLIGHTS'): code = code + self.generate_highlights(files,self.SETTINGS.get('POST_THREAD').get('CONTENT').get('THEATER_LINK'))
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER'): code = code + self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
-        code = code + self.generate_status(files)
+            code += self.generate_status(files,include_next_game=self.SETTINGS.get('POST_THREAD').get('CONTENT').get('NEXT_GAME'))
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER'): code = code + "\n" + self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER') + "\n\n"
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning all",thread,"code..."
         return code
 
@@ -679,7 +680,7 @@ class Editor:
             return None
         return None
 
-    def generate_status(self,files):
+    def generate_status(self,files,include_next_game=False):
         status = ""
         try:
             game = files["linescore"].get('data').get('game')
@@ -691,16 +692,19 @@ class Editor:
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
             elif game.get('status') == "Completed Early":
@@ -709,28 +713,34 @@ class Editor:
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
+                    if include_next_game: status += self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
             elif game.get('status') == "Postponed":
                 status = status + "##POSTPONED\n\n"
+                if include_next_game: status += self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             elif game.get('status') == "Suspended":
                 status = status + "##SUSPENDED\n\n"
+                if include_next_game: status += self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             elif game.get('status') == "Cancelled":
                 status = status + "##CANCELLED\n\n"
+                if include_next_game: status += self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             else:
@@ -739,6 +749,21 @@ class Editor:
         except:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for status, returning empty string..."
             return status
+
+    def generate_next_game(self,next_game=None):
+        next = ""
+        if not next_game: next_game = self.next_game(7)
+        if next_game.get('date'): 
+            teams_time = self.get_teams_time(next_game.get('url'))
+            next += "**Next Game:** " + next_game.get('date').strftime("%A, %B %d") + ", " + teams_time.get('time')
+            if teams_time.get('away').get('team_code') == self.SETTINGS.get('TEAM_CODE'):
+                next += " @ " + teams_time.get('home').get('team_name')
+            else:
+                next += " vs " + teams_time.get('away').get('team_name')
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning next game..."
+            return next
+        if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game not found, returning empty string..."
+        return next
 
     def didmyteamwin(self, url):
     #returns 0 for loss, 1 for win, 2 for tie, 3 for postponed/suspended/canceled, blank for exception
@@ -787,6 +812,62 @@ class Editor:
             return myteamwon
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won (exception)..." + myteamwon
         return myteamwon
+
+    def next_game(self,check_days):
+        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for next game..."
+        
+        next_game = {}
+        base_url = "http://gd2.mlb.com/components/game/mlb/"
+        today = datetime.today().date()
+        for d in (today + timedelta(days=x) for x in range(1, check_days)):
+            url = base_url + d.strftime("year_%Y/month_%m/day_%d/")
+            response = ""
+            while not response:
+                try:
+                    response = urllib2.urlopen(url)
+                except:
+                    if self.SETTINGS.get('LOG_LEVEL')>0: print "Couldn't find URL, retrying in 30 seconds..."
+                    time.sleep(30)
+
+            html = response.readlines()
+            directories = []
+            for v in html:
+                if self.SETTINGS.get('TEAM_CODE') + 'mlb' in v:
+                    if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
+                    v = v[v.index("\"") + 1:len(v)]
+                    v = v[0:v.index("\"")]
+                    next_game.update({'url' : url + v, 'date' : d, 'days_away' : (d - today).days})
+                    return next_game
+        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in next",check_days,"days..."
+        return next_game
+
+    def last_game(self,check_days):
+        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for last game..."
+        
+        last_game = {}
+        base_url = "http://gd2.mlb.com/components/game/mlb/"
+        today = datetime.today().date()
+        for d in (today - timedelta(days=x) for x in range(1, check_days)):
+            url = base_url + d.strftime("year_%Y/month_%m/day_%d/")
+            response = ""
+            while not response:
+                try:
+                    response = urllib2.urlopen(url)
+                except:
+                    if self.SETTINGS.get('LOG_LEVEL')>0: print "Couldn't find URL, retrying in 30 seconds..."
+                    time.sleep(30)
+
+            html = response.readlines()
+            directories = []
+            for v in html:
+                if self.SETTINGS.get('TEAM_CODE') + 'mlb' in v:
+                    if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found last game",(today-d).days,"day(s) ago on",d.strftime('%m/%d/%Y') + "..."
+                    v = v[v.index("\"") + 1:len(v)]
+                    v = v[0:v.index("\"")]
+                    last_game.update({'url' : url + v, 'date' : d, 'days_ago' : (today-d).days})
+                    return last_game
+        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in last",check_days,"days..."
+        return last_game
 
     def get_subreddits(self, homename, awayname):
         subreddits = []
@@ -880,6 +961,30 @@ class Editor:
 
         if self.SETTINGS.get('LOG_LEVEL')>1: print "Couldn't look up",field,"from",lookupfield,"=",lookupval
         return None
+
+    def get_teams_time(self, url):
+        teams = {}
+        try:
+            response = urllib2.urlopen(url+"linescore.json")
+            linescore = json.load(response)
+            game = linescore.get('data').get('game')
+        except Exception as e:
+            if self.SETTINGS.get('LOG_LEVEL')>1: print e
+            return teams
+
+        timestring = game.get('time_date') + " " + game.get('ampm')
+        date_object = datetime.strptime(timestring, "%Y/%m/%d %I:%M %p")
+        t = timedelta(hours=self.time_change)
+        timezone = self.time_zone
+        date_object = date_object - t
+        first_pitch = date_object.strftime("%I:%M %p ") + timezone
+        
+        teams.update({'home' : {'name_abbrev' : game.get('home_name_abbrev'), 'team_code' : game.get('home_code'), 'team_name' : game.get('home_team_name'), 'win' : game.get('home_win'), 'loss' : game.get('home_loss')},
+                        'away' : {'name_abbrev' : game.get('away_name_abbrev'), 'team_code' : game.get('away_code'), 'team_name' : game.get('away_team_name'), 'win' : game.get('away_win'), 'loss' : game.get('away_loss')},
+                        'time' : first_pitch})
+        
+        if self.SETTINGS.get('LOG_LEVEL')>1: print "Returning teams and time for specified game..."
+        return teams
 
     def get_team(self, team_id):
         team = []

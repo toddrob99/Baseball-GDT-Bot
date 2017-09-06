@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.4.1'
+        self.VERSION = '4.4.2'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -86,8 +86,8 @@ class Bot:
                     warnings.append('Found deprecated setting OFFDAY_THREAD_SETTINGS. Please move this to OFF_THREAD. See README.md and sample_settings.json.')
                     self.SETTINGS.update({'OFF_THREAD' : self.SETTINGS.pop('OFFDAY_THREAD_SETTINGS')})
                 else:
-                    warnings.append('Missing OFF_THREAD, using defaults (ENABLED: true, TAG: "OFF DAY THREAD:", TIME: 9AM, BODY: "No game today.", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "")...')
-                    self.SETTINGS.update({'OFF_THREAD' : {'ENABLED' : True,'TAG' : 'OFF DAY THREAD:','TIME' : '9AM', 'BODY' : 'No game today.', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : ''}})
+                    warnings.append('Missing OFF_THREAD, using defaults (ENABLED: true, TAG: "OFF DAY THREAD:", TIME: 9AM, FOOTER: "No game today. Feel free to discuss whatever you want in this thread.", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", SUPPRESS_OFFSEASON: true)...')
+                    self.SETTINGS.update({'OFF_THREAD' : {'ENABLED' : True,'TAG' : 'OFF DAY THREAD:','TIME' : '9AM', 'FOOTER' : 'No game today. Feel free to discuss whatever you want in this thread.', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'SUPPRESS_OFFSEASON' : True}})
 
             if self.SETTINGS.get('OFF_THREAD').get('ENABLED') == None:
                 if self.SETTINGS.get('OFFDAY_THREAD') != None:
@@ -116,24 +116,6 @@ class Bot:
                     warnings.append('Missing OFF_THREAD : TIME, using default ("9AM")...')
                     self.SETTINGS['OFF_THREAD'].update({'TIME' : '9AM'})
 
-            if self.SETTINGS.get('OFF_THREAD').get('BODY') == None:
-                if self.SETTINGS.get('OFF_THREAD').get('OFFDAY_THREAD_BODY') != None:
-                    # Deprecated, moved to self.SETTINGS.get('OFF_THREAD').get('BODY')
-                    warnings.append('Found deprecated setting OFF_THREAD : OFFDAY_THREAD_BODY. Please move this to OFF_THREAD : BODY. See README.md and sample_settings.json.')
-                    self.SETTINGS['OFF_THREAD'].update({'BODY' : self.SETTINGS['OFF_THREAD'].pop('OFFDAY_THREAD_BODY')})
-                else:
-                    warnings.append('Missing OFF_THREAD : BODY, using default ("No game today.")...')
-                    self.SETTINGS['OFF_THREAD'].update({'BODY' : 'No game today.'})
-
-            if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == None:
-                if self.SETTINGS.get('OFF_THREAD').get('OFFDAY_THREAD_FLAIR') != None:
-                    # Deprecated, moved to self.SETTINGS.get('OFF_THREAD').get('FLAIR')
-                    warnings.append('Found deprecated setting OFF_THREAD : OFFDAY_THREAD_FLAIR. Please move this to OFF_THREAD : FLAIR. See README.md and sample_settings.json.')
-                    self.SETTINGS['OFF_THREAD'].update({'FLAIR' : self.SETTINGS['OFF_THREAD'].pop('OFFDAY_THREAD_FLAIR')})
-                else:
-                    warnings.append('Missing OFF_THREAD : FLAIR, using default ("")...')
-                    self.SETTINGS['OFF_THREAD'].update({'FLAIR' : ''})
-
             if self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') == None:
                 if self.SETTINGS.get('SUGGESTED_SORT') != None:
                     # Deprecated, moved to self.SETTINGS.get('XXXX_THREAD').get('SUGGESTED_SORT')
@@ -151,6 +133,32 @@ class Bot:
                 else:
                     warnings.append('Missing OFF_THREAD : INBOX_REPLIES, using default (false)...')
                     self.SETTINGS['OFF_THREAD'].update({'INBOX_REPLIES' : False})
+
+            if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == None:
+                if self.SETTINGS.get('OFF_THREAD').get('OFFDAY_THREAD_FLAIR') != None:
+                    # Deprecated, moved to self.SETTINGS.get('OFF_THREAD').get('FLAIR')
+                    warnings.append('Found deprecated setting OFF_THREAD : OFFDAY_THREAD_FLAIR. Please move this to OFF_THREAD : FLAIR. See README.md and sample_settings.json.')
+                    self.SETTINGS['OFF_THREAD'].update({'FLAIR' : self.SETTINGS['OFF_THREAD'].pop('OFFDAY_THREAD_FLAIR')})
+                else:
+                    warnings.append('Missing OFF_THREAD : FLAIR, using default ("")...')
+                    self.SETTINGS['OFF_THREAD'].update({'FLAIR' : ''})
+
+            if self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON') == None:
+                warnings.append('Missing OFF_THREAD : SUPPRESS_OFFSEASON, using default (true)...')
+                self.SETTINGS['OFF_THREAD'].update({'SUPPRESS_OFFSEASON' : True})
+
+            if self.SETTINGS.get('OFF_THREAD').get('FOOTER') == None:
+                if self.SETTINGS.get('OFF_THREAD').get('OFFDAY_THREAD_BODY') != None:
+                    # Deprecated, moved to self.SETTINGS.get('OFF_THREAD').get('FOOTER')
+                    warnings.append('Found deprecated setting OFF_THREAD : OFFDAY_THREAD_BODY. Please move this to OFF_THREAD : FOOTER. See README.md and sample_settings.json.')
+                    self.SETTINGS['OFF_THREAD'].update({'FOOTER' : self.SETTINGS['OFF_THREAD'].pop('OFFDAY_THREAD_BODY')})
+                elif self.SETTINGS.get('OFF_THREAD').get('BODY') != None:
+                    # Deprecated, moved to self.SETTINGS.get('OFF_THREAD').get('FOOTER')
+                    warnings.append('Found deprecated setting OFF_THREAD : BODY. Please move this to OFF_THREAD : FOOTER. See README.md and sample_settings.json.')
+                    self.SETTINGS['OFF_THREAD'].update({'FOOTER' : self.SETTINGS['OFF_THREAD'].pop('BODY')})
+                else:
+                    warnings.append('Missing OFF_THREAD : FOOTER, using default ("No game today. Feel free to discuss whatever you want in this thread.")...')
+                    self.SETTINGS['OFF_THREAD'].update({'FOOTER' : 'No game today. Feel free to discuss whatever you want in this thread.'})
 
             if self.SETTINGS.get('PRE_THREAD') == None:
                 if self.SETTINGS.get('PRE_THREAD_SETTINGS') != None:
@@ -249,8 +257,8 @@ class Bot:
                     warnings.append('Found deprecated setting THREAD_SETTINGS. Please move this to GAME_THREAD. See README.md and sample_settings.json.')
                     self.SETTINGS.update({'GAME_THREAD' : self.SETTINGS.pop('THREAD_SETTINGS')})
                 else:
-                    warnings.append('Missing GAME_THREAD, using defaults (TAG: "GAME THREAD:", HOURS_BEFORE: 3, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", MESSAGE: false, HOLD_DH_GAME2_THREAD: true, EXTRA_SLEEP: 0, HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, CURRENT_STATE: true, FOOTER: "**Remember to sort by new to keep up!**", UPDATE_STAMP: true, THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true)...')
-                    self.SETTINGS.update({'GAME_THREAD' : {'TAG' : 'GAME THREAD:', 'HOURS_BEFORE' : 3, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'MESSAGE' : False, 'HOLD_DH_GAME2_THREAD' : True, 'EXTRA_SLEEP' : 0, 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'CURRENT_STATE' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'UPDATE_STAMP' : True, 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True}}})
+                    warnings.append('Missing GAME_THREAD, using defaults (TAG: "GAME THREAD:", HOURS_BEFORE: 3, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", MESSAGE: false, HOLD_DH_GAME2_THREAD: true, EXTRA_SLEEP: 0, HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, CURRENT_STATE: true, FOOTER: "**Remember to sort by new to keep up!**", UPDATE_STAMP: true, THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true, NEXT_GAME: true)...')
+                    self.SETTINGS.update({'GAME_THREAD' : {'TAG' : 'GAME THREAD:', 'HOURS_BEFORE' : 3, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'MESSAGE' : False, 'HOLD_DH_GAME2_THREAD' : True, 'EXTRA_SLEEP' : 0, 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'CURRENT_STATE' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'UPDATE_STAMP' : True, 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True, 'NEXT_GAME' : True}}})
 
             if self.SETTINGS.get('GAME_THREAD').get('TAG') == None:
                 if self.SETTINGS.get('GAME_THREAD').get('THREAD_TAG') != None:
@@ -362,14 +370,18 @@ class Bot:
                 warnings.append('Missing GAME_THREAD : CONTENT : PREVIEW_PROBABLES, using default (true)...')
                 self.SETTINGS['GAME_THREAD']['CONTENT'].update({'PREVIEW_PROBABLES' : True})
 
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('NEXT_GAME') == None:
+                warnings.append('Missing GAME_THREAD : CONTENT : NEXT_GAME, using default (true)...')
+                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'NEXT_GAME' : True})
+
             if self.SETTINGS.get('POST_THREAD') == None:
                 if self.SETTINGS.get('POST_THREAD_SETTINGS') != None:
                     # Deprecated, moved to self.SETTINGS.get('POST_THREAD')
                     warnings.append('Found deprecated setting POST_THREAD_SETTINGS. Please move this to POST_THREAD. See README.md and sample_settings.json.')
                     self.SETTINGS.update({'POST_THREAD' : self.SETTINGS.pop('POST_THREAD_SETTINGS')})
                 else:
-                    warnings.append('Missing POST_THREAD, using defaults (WIN_TAG: "OUR TEAM WON:", LOSS_TAG: "OUR TEAM LOST:", OTHER_TAG: "POST GAME THREAD:",  SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true)...')
-                    self.SETTINGS.update({'POST_THREAD' : {'WIN_TAG' : 'OUR TEAM WON:', 'LOSS_TAG' : 'OUR TEAM LOST:', 'OTHER_TAG' : 'POST GAME THREAD:', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True}}})
+                    warnings.append('Missing POST_THREAD, using defaults (WIN_TAG: "OUR TEAM WON:", LOSS_TAG: "OUR TEAM LOST:", OTHER_TAG: "POST GAME THREAD:",  SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true, NEXT_GAME: true)...')
+                    self.SETTINGS.update({'POST_THREAD' : {'WIN_TAG' : 'OUR TEAM WON:', 'LOSS_TAG' : 'OUR TEAM LOST:', 'OTHER_TAG' : 'POST GAME THREAD:', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True, 'NEXT_GAME' : True}}})
 
             if self.SETTINGS.get('POST_THREAD').get('ENABLED') == None:
                 if self.SETTINGS.get('POST_GAME_THREAD') != None:
@@ -461,6 +473,10 @@ class Bot:
                 warnings.append('Missing POST_THREAD : CONTENT : THEATER_LINK, using default (true)...')
                 self.SETTINGS['POST_THREAD']['CONTENT'].update({'THEATER_LINK' : True})
 
+            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('NEXT_GAME') == None:
+                warnings.append('Missing POST_THREAD : CONTENT : NEXT_GAME, using default (true)...')
+                self.SETTINGS['POST_THREAD']['CONTENT'].update({'NEXT_GAME' : True})
+
             if self.SETTINGS.get('WINLOSS_POST_THREAD_TAGS') != None:
                 # Deprecated, no longer used
                 warnings.append('Found deprecated setting WINLOSS_POST_THREAD_TAGS. This setting is no longer being used. Set all of the tags to the same value if you don\' want to use different tags for wins and losses.')
@@ -542,6 +558,7 @@ class Bot:
         games = {}
         offday = {}
         threads = {}
+        offseason = False
 
         while True:
             today = datetime.today()
@@ -591,11 +608,37 @@ class Bot:
             pendinggames = len(games)
 
             if len(games) == 0:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "No games today..."
+                next_game = edit.next_game(30)
+                if not next_game.get('days_away'):
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print "No games in the next 30 days. It's the off season..."
+                    offseason = True
+                elif next_game.get('days_away') > 14:
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Next game is",next_game.get('days_away'),"days away. It's the off season..."
+                    offseason = True
+                elif next_game.get('days_away') <= 14:
+                    last_game = edit.last_game(14)
+                    if not last_game.get('days_ago'):
+                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Next game is",next_game.get('days_away'),"day(s) away, but no games in the last 14 days. It's the off season..."
+                        offseason = True
+                    else:
+                        if self.SETTINGS.get('LOG_LEVEL')>1: print "No games today..."
+                        offseason = False
+                else:
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print "No games today..."
+                    offseason = False
 
-            if self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(games) == 0:
+            if self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(games) == 0 and not (offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON')):
                 timechecker.pregamecheck(self.SETTINGS.get('OFF_THREAD').get('TIME'))
-                offday.update({'offtitle': self.SETTINGS.get('OFF_THREAD').get('TAG') + " " + datetime.strftime(datetime.today(), "%A, %B %d"), 'offmessage' : self.SETTINGS.get('OFF_THREAD').get('BODY')})
+                offday.update({'offtitle': self.SETTINGS.get('OFF_THREAD').get('TAG') + " " + datetime.strftime(datetime.today(), "%A, %B %d"), 'offmessage' : self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+                if next_game.get('date'): 
+                    next = edit.generate_next_game(next_game)
+                    if len(self.SETTINGS.get('OFF_THREAD').get('FOOTER')): next += "\n\n"
+                    offday.update({'offmessage' : next + self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+                else: 
+                    if len(self.SETTINGS.get('OFF_THREAD').get('FOOTER')) == 0:
+                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: No date found for next game, and off day footer text is blank. Using default footer text since post cannot be blank..."
+                        offday.update({'offmessage' : "No game today. Feel free to discuss whatever you want in this thread."})
+                    else: offday.update({'offmessage' : self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 try:
                     subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
                     for submission in subreddit.new():
@@ -622,7 +665,7 @@ class Bot:
                             stale_games = {}
 
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Submitting offday thread..."
-                        offday.update({'offsub' : subreddit.submit(offday.get('offtitle'), selftext=self.SETTINGS.get('OFF_THREAD').get('BODY'), send_replies=self.SETTINGS.get('OFF_THREAD').get('INBOX_REPLIES'))})
+                        offday.update({'offsub' : subreddit.submit(offday.get('offtitle'), selftext=offday.get('offmessage'), send_replies=self.SETTINGS.get('OFF_THREAD').get('INBOX_REPLIES'))})
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Offday thread submitted..."
 
                         if self.SETTINGS.get('STICKY'):
@@ -663,6 +706,8 @@ class Bot:
                     if self.SETTINGS.get('LOG_LEVEL')>0: print "Error posting off day thread:",err
             elif not self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(games) == 0:
                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Off day detected, but off day thread disabled."
+            elif offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON'):
+                if self.SETTINGS.get('LOG_LEVEL')>1: print "Suppressing off day thread during off season..."
 
             if self.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(games) > 0:
                 timechecker.pregamecheck(self.SETTINGS.get('PRE_THREAD').get('TIME'))
@@ -768,11 +813,12 @@ class Bot:
             elif not self.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(games):
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Pregame thread disabled..."
 
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Generating game thread titles for all games..."
-            for k,game in games.items():
-                game.update({'gametitle': edit.generate_title(game.get('url'),'game',game.get('doubleheader'),game.get('gamenum'))})
+            if len(games) > 0:
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Generating game thread titles for all games..."
+                for k,game in games.items():
+                    game.update({'gametitle': edit.generate_title(game.get('url'),'game',game.get('doubleheader'),game.get('gamenum'))})
 
-            while True:
+            while len(games) > 0:
                 for k,game in games.items():
                     if self.SETTINGS.get('LOG_LEVEL')>1 and len(games)>1: print "Game",k,"check"
                     for otherk,othergame in games.items():

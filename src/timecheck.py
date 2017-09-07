@@ -24,7 +24,7 @@ class TimeCheck:
                 if self.log_level>1: print "Last date check: " + datetime.strftime(check, "%d %I:%M:%S %p")
                 time.sleep(600)
 
-    def gamecheck(self,dir,thisgame={},othergame={},gamecount=1):
+    def gamecheck(self,dir,thisgame={},othergame={},gamecount=1,just_get_time=False):
         if thisgame.get('gamesub'): return True #game thread is already posted
         while True:
             try:
@@ -39,7 +39,7 @@ class TimeCheck:
         timestring = game.get('time_date') + " " + game.get('ampm')
         date_object = datetime.strptime(timestring, "%Y/%m/%d %I:%M %p")
         if thisgame.get('doubleheader') and thisgame.get('gamenum')=='2':
-            if self.hold_dh_game2_thread:
+            if self.hold_dh_game2_thread and not just_get_time:
                 if othergame.get('doubleheader') and not othergame.get('final'):
                     if self.log_level>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Holding doubleheader Game",thisgame.get('gamenum'),"until Game",othergame.get('gamenum'),"is final, sleeping for 5 seconds..."
                     time.sleep(5)
@@ -61,6 +61,7 @@ class TimeCheck:
                     if self.log_level>1: print "Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3 hours for Game 2..."
                     date_object = odate_object.replace(hour=odate_object.hour+3) #use game 1 start time + 3 hours for game 2 start time
                     if self.log_level>2: print "Game 2 start time:",date_object,"; Game 1 start time:",odate_object
+        if just_get_time: return date_object.replace(hour=date_object.hour - self.time_before/60/60)
         while True:
             check = datetime.today()
             if date_object >= check:

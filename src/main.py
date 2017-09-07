@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.4.2'
+        self.VERSION = '4.5.0'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -166,8 +166,8 @@ class Bot:
                     warnings.append('Found deprecated setting PRE_THREAD_SETTINGS. Please move this to PRE_THREAD. See README.md and sample_settings.json.')
                     self.SETTINGS.update({'PRE_THREAD' : self.SETTINGS.pop('PRE_THREAD_SETTINGS')})
                 else:
-                    warnings.append('Missing PRE_THREAD, using defaults (TAG: "PREGAME THREAD:", TIME: 9AM, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", PROBABLES: true, FIRST_PITCH: true, DESCRIPTION: true, BLURB: true)...')
-                    self.SETTINGS.update({'PRE_THREAD' : {'TAG' : 'PREGAME THREAD:', 'TIME' : '9AM', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'PROBABLES' : True, 'FIRST_PITCH' : True, 'DESCRIPTION' : True, 'BLURB' : True}}})
+                    warnings.append('Missing PRE_THREAD, using defaults (TAG: "PREGAME THREAD:", TIME: 9AM, SUPPRESS_MINUTES: 0, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", PROBABLES: true, FIRST_PITCH: true, DESCRIPTION: true, BLURB: true)...')
+                    self.SETTINGS.update({'PRE_THREAD' : {'TAG' : 'PREGAME THREAD:', 'TIME' : '9AM', 'SUPPRESS_MINUTES' : 0, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'PROBABLES' : True, 'FIRST_PITCH' : True, 'DESCRIPTION' : True, 'BLURB' : True}}})
 
             if self.SETTINGS.get('PRE_THREAD').get('ENABLED') == None:
                 if self.SETTINGS.get('PREGAME_THREAD') != None:
@@ -195,6 +195,10 @@ class Bot:
                 else:
                     warnings.append('Missing PRE_THREAD : TIME, using default ("9AM")...')
                     self.SETTINGS['PRE_THREAD'].update({'TIME' : '9AM'})
+
+            if self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES') == None:
+                warnings.append('Missing PRE_THREAD : SUPPRESS_MINUTES, using default (0)...')
+                self.SETTINGS['PRE_THREAD'].update({'SUPPRESS_MINUTES' : 0})
 
             if self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') == None:
                 if self.SETTINGS.get('SUGGESTED_SORT') != None:
@@ -584,6 +588,36 @@ class Bot:
 
             if len(offday): stale_games[0] = offday
             else: stale_games = games
+            if self.SETTINGS.get('STICKY') and len(stale_games)==0:
+                try:
+                    sticky1 = r.subreddit(self.SETTINGS.get('SUBREDDIT')).sticky(1)
+                    if (sticky1.author == r.user.me() and not sticky1.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y")) and 
+                                                        not sticky1.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - DOUBLEHEADER") and
+                                                        not sticky1.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - GAME 1") and
+                                                        not sticky1.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - GAME 2") and 
+                                                        sticky1.title.startswith((self.SETTINGS.get('OFF_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('PRE_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('GAME_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('WIN_TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('LOSS_TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('OTHER_TAG')))):
+                        stale_games[len(stale_games)+1] = {'gamesub' : sticky1, 'gametitle' : sticky1.title}
+                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Found stale thread in top sticky slot..."
+                    sticky2 = r.subreddit(self.SETTINGS.get('SUBREDDIT')).sticky(2)
+                    if (sticky2.author == r.user.me() and not sticky2.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y")) and 
+                                                        not sticky2.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - DOUBLEHEADER") and 
+                                                        not sticky2.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - GAME 1") and 
+                                                        not sticky2.title.endswith(datetime.strftime(datetime.today(),"%B %d, %Y") + " - GAME 2") and
+                                                        sticky2.title.startswith((self.SETTINGS.get('OFF_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('PRE_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('GAME_THREAD').get('TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('WIN_TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('LOSS_TAG'), 
+                                                                                    self.SETTINGS.get('POST_THREAD').get('OTHER_TAG')))):
+                        stale_games[len(stale_games)+1] = {'gamesub' : sticky2, 'gametitle' : sticky2.title}
+                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Found stale thread in bottom sticky slot..."
+                except:
+                    pass
             if self.SETTINGS.get('LOG_LEVEL')>2: print "stale games:",stale_games
 
             threads = {}
@@ -670,8 +704,11 @@ class Bot:
 
                         if self.SETTINGS.get('STICKY'):
                             if self.SETTINGS.get('LOG_LEVEL')>1: print "Stickying submission..."
-                            offday.get('offsub').mod.sticky()
-                            if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                            try:
+                                offday.get('offsub').mod.sticky()
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                            except:
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Sticky of offday thread failed (check mod privileges), continuing."
 
                         if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
                             if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == "":
@@ -698,8 +735,11 @@ class Bot:
 
                         if self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') != "":
                             if self.SETTINGS.get('LOG_LEVEL')>1: print "Setting suggested sort to " + self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') + "..."
-                            offday.get('offsub').mod.suggested_sort(self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
-                            if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                            try:
+                                offday.get('offsub').mod.suggested_sort(self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                            except:
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Setting suggested sort on offday thread failed (check mod privileges), continuing."
 
                         if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p")
                 except Exception, err:
@@ -744,8 +784,17 @@ class Bot:
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print "Linking this game to existing consolidated pregame thread from doubleheader game",otherk,"..."
                                     game.update({'presub' : othergame.get('presub')})
                                     break
+                            gameinfo = edit.get_teams_time(game.get('url'))
+                            original_pretitle = None
+                            if gameinfo.get('status') in ['Final', 'Game Over', 'Completed Early']:
+                                if int(gameinfo.get('home').get('runs')) > int(gameinfo.get('away').get('runs')):
+                                    original_pretitle = game.get('pretitle').replace(gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + gameinfo.get('home').get('loss') + ')', gameinfo.get('home').get('team_name') + ' (' + str(int(gameinfo.get('home').get('win'))-1) + '-' + gameinfo.get('home').get('loss') + ')').replace(gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + gameinfo.get('away').get('loss') + ')', gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + str(int(gameinfo.get('away').get('loss'))-1) + ')')
+                                elif int(gameinfo.get('away').get('runs')) > int(gameinfo.get('home').get('runs')):
+                                    original_pretitle = game.get('pretitle').replace(gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + gameinfo.get('home').get('loss') + ')', gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + str(int(gameinfo.get('home').get('loss'))-1) + ')').replace(gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + gameinfo.get('away').get('loss') + ')', gameinfo.get('away').get('team_name') + ' (' + str(int(gameinfo.get('away').get('win'))-1) + '-' + gameinfo.get('away').get('loss') + ')')
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Detected Game",k,"is over. Checking for thread with previous title..."
                             for submission in subreddit.new():
-                                if submission.title == game.get('pretitle'):
+                                if submission.title in [game.get('pretitle'), original_pretitle]:
+                                    if submission.title == original_pretitle: game.update({'pretitle' : original_pretitle})
                                     if game.get('doubleheader') and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Game",k,"consolidated doubleheader pregame thread already posted, submitting edits..."
                                         game.update({'presub' : submission})
@@ -760,13 +809,23 @@ class Bot:
                                     time.sleep(5)
                                     break
                             if not game.get('presub'):
+                                if self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES')>=0:
+                                    time_to_post = timechecker.gamecheck(game.get('url'),game,othergame,just_get_time=True)
+                                    minutes_until_post_time = int((time_to_post-datetime.today()).total_seconds() / 60)
+                                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Minutes until game thread post time:",minutes_until_post_time
+                                    if minutes_until_post_time <= self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES'):
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Suppressing pregame thread for Game",k,"because game thread will be posted soon..."
+                                        break
                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Submitting pregame thread for Game",k,"..."
                                 game.update({'presub' : subreddit.submit(game.get('pretitle'), selftext=edit.generate_pre_code(games,k,otherk), send_replies=self.SETTINGS.get('PRE_THREAD').get('INBOX_REPLIES'))})
                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Pregame thread submitted..."
                                 if self.SETTINGS.get('STICKY'):
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print "Stickying submission..."
-                                    game.get('presub').mod.sticky()
-                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                    try:
+                                        game.get('presub').mod.sticky()
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                    except:
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Sticky of pregame thread failed (check mod privileges), continuing."
 
                                 if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
                                     if self.SETTINGS.get('PRE_THREAD').get('FLAIR') == "":
@@ -793,8 +852,11 @@ class Bot:
 
                                 if self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') != "":
                                     if self.SETTINGS.get('LOG_LEVEL')>1: print "Setting suggested sort to " + self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') + "..."
-                                    game.get('presub').mod.suggested_sort(self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
-                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                    try:
+                                        game.get('presub').mod.suggested_sort(self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                    except:
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Setting suggested sort on pregame thread failed (check mod privileges), continuing."
 
                                 if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Sleeping for 5 seconds..."
                                 time.sleep(5)
@@ -851,10 +913,22 @@ class Bot:
                                         stale_games = {}
                                     if game.get('presub') and not game.get('gamesub'):
                                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Unstickying Game",k,"pregame thread..."
-                                        game.get('presub').mod.sticky(state=False)
+                                        try:
+                                            game.get('presub').mod.sticky(state=False)
+                                        except:
+                                            if self.SETTINGS.get('LOG_LEVEL')>1: print "Unsticky of pregame thread failed, continuing."
                                 if not game.get('gamesub'):
+                                    gameinfo = edit.get_teams_time(game.get('url'))
+                                    original_gametitle = None
+                                    if gameinfo.get('status') in ['Final', 'Game Over', 'Completed Early']:
+                                        if int(gameinfo.get('home').get('runs')) > int(gameinfo.get('away').get('runs')):
+                                            original_gametitle = game.get('gametitle').replace(gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + gameinfo.get('home').get('loss') + ')', gameinfo.get('home').get('team_name') + ' (' + str(int(gameinfo.get('home').get('win'))-1) + '-' + gameinfo.get('home').get('loss') + ')').replace(gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + gameinfo.get('away').get('loss') + ')', gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + str(int(gameinfo.get('away').get('loss'))-1) + ')')
+                                        elif int(gameinfo.get('away').get('runs')) > int(gameinfo.get('home').get('runs')):
+                                            original_gametitle = game.get('gametitle').replace(gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + gameinfo.get('home').get('loss') + ')', gameinfo.get('home').get('team_name') + ' (' + gameinfo.get('home').get('win') + '-' + str(int(gameinfo.get('home').get('loss'))-1) + ')').replace(gameinfo.get('away').get('team_name') + ' (' + gameinfo.get('away').get('win') + '-' + gameinfo.get('away').get('loss') + ')', gameinfo.get('away').get('team_name') + ' (' + str(int(gameinfo.get('away').get('win'))-1) + '-' + gameinfo.get('away').get('loss') + ')')
+                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Detected Game",k,"is over. Checking for thread with previous title..."
                                     for submission in subreddit.new():
-                                        if submission.title == game.get('gametitle'):
+                                        if submission.title in [game.get('gametitle'), original_gametitle]:
+                                            if submission.title == original_gametitle: game.update({'gametitle' : original_gametitle})
                                             if self.SETTINGS.get('LOG_LEVEL')>1: print "Game",k,"thread already posted, getting submission..."
                                             game.update({'gamesub' : submission, 'status' : edit.get_status(game.get('url'))})
                                             threads[k].update({'game' : submission.selftext})
@@ -871,13 +945,19 @@ class Bot:
 
                                     if self.SETTINGS.get('STICKY'):
                                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Stickying submission..."
-                                        game.get('gamesub').mod.sticky()
-                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                        try:
+                                            game.get('gamesub').mod.sticky()
+                                            if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                        except:
+                                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Sticky of game thread failed (check mod privileges), continuing."
 
                                     if self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT') != "":
                                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Setting suggested sort to " + self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT') + "..."
-                                        game.get('gamesub').mod.suggested_sort(self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
-                                        if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                        try:
+                                            game.get('gamesub').mod.suggested_sort(self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
+                                            if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                        except:
+                                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Setting suggested sort on game thread failed (check mod privileges), continuing."
 
                                     if self.SETTINGS.get('GAME_THREAD').get('MESSAGE'):
                                         if self.SETTINGS.get('LOG_LEVEL')>1: print "Messaging Baseballbot..."
@@ -920,14 +1000,14 @@ class Bot:
                             if skipflag: skipflag=False
                             else:
                                 game.update({'status' : edit.get_status(game.get('url'))})
-                                str = edit.generate_code(game.get('url'),"game")
-                                if str != threads[k].get('game'):
-                                    threads[k].update({'game' : str})
+                                threadstr = edit.generate_code(game.get('url'),"game")
+                                if threadstr != threads[k].get('game'):
+                                    threads[k].update({'game' : threadstr})
                                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Editing thread for Game",k,"..."
                                     while True:
                                         try:
-                                            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): str += "^^^Last ^^^Updated: ^^^" + datetime.strftime(datetime.today(), "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^") + self.SETTINGS.get('BOT_TIME_ZONE')
-                                            game.get('gamesub').edit(str)
+                                            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): threadstr += "^^^Last ^^^Updated: ^^^" + datetime.strftime(datetime.today(), "%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^") + self.SETTINGS.get('BOT_TIME_ZONE')
+                                            game.get('gamesub').edit(threadstr)
                                             sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                             if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Game",k,"edits submitted. Sleeping for",sleeptime,"seconds..."
                                             time.sleep(sleeptime)
@@ -951,10 +1031,16 @@ class Bot:
                                         if self.SETTINGS.get('STICKY'):
                                             if game.get('presub'):
                                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Unstickying Game",k,"pregame thread..."
-                                                game.get('presub').mod.sticky(state=False)
+                                                try:
+                                                    game.get('presub').mod.sticky(state=False)
+                                                except:
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Unsticky of pregame thread failed, continuing."
                                             if game.get('gamesub'):
                                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Unstickying Game",k,"game thread..."
-                                                game.get('gamesub').mod.sticky(state=False)
+                                                try:
+                                                    game.get('gamesub').mod.sticky(state=False)
+                                                except:
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Unsticky of game thread failed, continuing."
                                         if not game.get('postsub'):
                                             for submission in subreddit.new():
                                                 if submission.title == game.get('posttitle'):
@@ -968,8 +1054,11 @@ class Bot:
 
                                             if self.SETTINGS.get('STICKY'):
                                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Stickying submission..."
-                                                game.get('postsub').mod.sticky()
-                                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                                try:
+                                                    game.get('postsub').mod.sticky()
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Submission stickied..."
+                                                except:
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Sticky of postgame thread failed (check mod privileges), continuing."
 
                                             if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
                                                 if self.SETTINGS.get('POST_THREAD').get('FLAIR') == "":
@@ -996,8 +1085,11 @@ class Bot:
 
                                             if self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT') != "":
                                                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Setting suggested sort to " + self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT') + "..."
-                                                game.get('postsub').mod.suggested_sort(self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
-                                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                                try:
+                                                    game.get('postsub').mod.suggested_sort(self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "Suggested sort set..."
+                                                except:
+                                                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Setting suggested sort on postgame thread failed (check mod privileges), continuing."
 
                                             if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"Sleeping for 5 seconds..."
                                             time.sleep(5)
@@ -1011,11 +1103,14 @@ class Bot:
                 pendinggames=0
                 previewgames=0
                 completedgames=0
+                delayedgames=0
                 for  sk,sgame in games.items():
                     if sgame.get('gamesub') and not sgame.get('final'):
                         activegames += 1
                         if sgame.get('status') in ['Preview','Pre-Game']:
                             previewgames += 1
+                        if sgame.get('status') == 'Delayed':
+                            delayedgames += 1
                     if not sgame.get('gamesub'):
                         pendinggames += 1
                     if sgame.get('postsub') and sgame.get('final'):
@@ -1028,7 +1123,7 @@ class Bot:
                 limits = r.auth.limits
                 if limits.get('used') > maxapi: maxapi = limits.get('used')
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Reddit API Calls:",limits,"- Max usage today:",maxapi
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Active Games:",activegames,"...in Preview/Pre-Game Status:",previewgames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Active Games:",activegames,"...in Preview/Pre-Game Status:",previewgames,"...in Delayed Status:",delayedgames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
 
                 if activegames == 0 and pendinggames == 0:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "All games final for today (or off day), going into end of day loop... "
@@ -1039,6 +1134,9 @@ class Bot:
                 elif activegames > 0 and previewgames == activegames:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game status, sleeping for 5 minutes... "
                     time.sleep(300)
+                elif activegames > 0 and (delayedgames + previewgames) == activegames:
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game or Delayed status, sleeping for 1 minute... "
+                    time.sleep(60)
                 elif limits.get('remaining') < 60:
                     if self.SETTINGS.get('LOG_LEVEL')>0: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Approaching Reddit API rate limit. Taking a 10 second break..."
                     time.sleep(10)

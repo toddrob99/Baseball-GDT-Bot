@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.4.2
+### Current Version: 4.5.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -60,6 +60,7 @@ The following settings can be configured in `src/settings.json`:
 	* `ENABLED` - do you want a pre game thread? (true/false)
 	* `TAG` - prefix for the thread title ("PREGAME THREAD:")
 	* `TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
+	* `SUPPRESS_MINUTES` - pregame thread will be suppressed if game thread will be posted within this number of minutes. A value of 0 will suppress the pregame thread only if it is already time to post the game thread. Set to -1 to disable suppression based on game thread post time. (-1, 0, 60, 120, etc. default: 0)
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Pregame Thread")
@@ -114,6 +115,17 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.5.0
+* Added `SUPPRESS_MINUTES` option under `PRE_THREAD` section. Pregame thread will be suppressed if game thread will be posted within this number of minutes. Default is 0 (suppress if it is already time to post the game thread), use -1 to disable suppression
+* Added detection of stale sticky threads when bot is started. It will look for sticky posts submitted by the bot user (requires identity scope), with title beginning with one of the configured off/pre/game/post tags, and with title not ending with today's date. Stale threads will be unstickied when new off/pre/game thread is posted (existing functionality)
+* Enhanced detection of existing pregame and game threads. The bot will now be able to identify existing threads even after the game is over and records have changed
+* Fixed variable/function name collision by renaming the `str` variable to `threadstr`
+* Fixed spacing on mobile between Linescore and Scoring Plays tables, and between Decisions table and Next Game/Footer
+* Current state will now say if the game is delayed
+* Added 1 minute sleep if all posted (non-Preview/Pre-Game) games are in Delayed status, rather than checking every 5 seconds
+* Fixed final score and decisions not showing when a game is completed early
+* Added error handling for sticky, unsticky, and suggested sort actions, in case pre thread was deleted when game/post threads are posted, or bot user does not have mod rights
 
 #### v4.4.2
 * Added `SUPPRESS_OFFSEASON` setting under `OFF_THREAD` section. Default is true, which will suppress off day threads during the off season (when there are no games in the next 14 days, or when there have been no games in the last 14 days)

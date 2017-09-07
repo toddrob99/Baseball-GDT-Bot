@@ -489,7 +489,7 @@ class Editor:
                 linescore = linescore + "|"
             linescore = linescore + game.get('home_team_runs') + "|" + game.get('home_team_hits') + "|" + game.get(
                 'home_team_errors')
-            linescore = linescore + "\n\n"
+            linescore = linescore + "\n\n\n"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning linescore..."
             return linescore
         except:
@@ -578,10 +578,12 @@ class Editor:
         current_state = ""
         try:
             game = files["linescore"].get('data').get('game')
-            if game.get('status') != 'In Progress':
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Game status is not In Progress, returning returning empty string for current_state..."
+            if game.get('status') not in ['In Progress','Delayed']:
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Game status is not In Progress or Delayed, returning empty string for current_state..."
                 return current_state
-            else:
+            elif game.get('status') == 'Delayed':
+                return "###Game is currently delayed...\n\n"
+            elif game.get('status') == 'In Progress':
                 topbottom = game.get('inning_state') + " of the "
                 ordinal = lambda n: str(n) + {1: 'st', 2: 'nd', 3: 'rd'}.get(10<=n%100<=20 and n or n % 10, 'th')
                 inning = ordinal(int(game.get('inning')))
@@ -692,55 +694,56 @@ class Editor:
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
             elif game.get('status') == "Completed Early":
+                s = files["linescore"].get('data').get('game')
                 status = status + "##COMPLETED EARLY: "
                 if int(s.get("home_team_runs")) < int(s.get("away_team_runs")):
                     status = status + s.get("away_team_runs") + "-" + s.get("home_team_runs") + " " + s.get(
                         "away_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) > int(s.get("away_team_runs")):
                     status = status + s.get("home_team_runs") + "-" + s.get("away_team_runs") + " " + s.get(
                         "home_team_name") + "\n"
                     status = status + self.generate_decisions(files)
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
                 elif int(s.get("home_team_runs")) == int(s.get("away_team_runs")):
                     status = status + "TIE"
-                    if include_next_game: status += self.generate_next_game() + "\n\n"
+                    if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                     if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                     return status
             elif game.get('status') == "Postponed":
                 status = status + "##POSTPONED\n\n"
-                if include_next_game: status += self.generate_next_game() + "\n\n"
+                if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             elif game.get('status') == "Suspended":
                 status = status + "##SUSPENDED\n\n"
-                if include_next_game: status += self.generate_next_game() + "\n\n"
+                if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             elif game.get('status') == "Cancelled":
                 status = status + "##CANCELLED\n\n"
-                if include_next_game: status += self.generate_next_game() + "\n\n"
+                if include_next_game: status += "\n" + self.generate_next_game() + "\n\n"
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status..."
                 return status
             else:
@@ -979,10 +982,11 @@ class Editor:
         date_object = date_object - t
         first_pitch = date_object.strftime("%I:%M %p ") + timezone
         
-        teams.update({'home' : {'name_abbrev' : game.get('home_name_abbrev'), 'team_code' : game.get('home_code'), 'team_name' : game.get('home_team_name'), 'win' : game.get('home_win'), 'loss' : game.get('home_loss')},
-                        'away' : {'name_abbrev' : game.get('away_name_abbrev'), 'team_code' : game.get('away_code'), 'team_name' : game.get('away_team_name'), 'win' : game.get('away_win'), 'loss' : game.get('away_loss')},
-                        'time' : first_pitch})
-        
+        teams.update({'home' : {'name_abbrev' : game.get('home_name_abbrev'), 'team_code' : game.get('home_code'), 'team_name' : game.get('home_team_name'), 'win' : game.get('home_win'), 'loss' : game.get('home_loss'), 'runs' : game.get('home_team_runs')},
+                        'away' : {'name_abbrev' : game.get('away_name_abbrev'), 'team_code' : game.get('away_code'), 'team_name' : game.get('away_team_name'), 'win' : game.get('away_win'), 'loss' : game.get('away_loss'), 'runs' : game.get('away_team_runs')},
+                        'time' : first_pitch,
+                        'status' : game.get('status')})
+
         if self.SETTINGS.get('LOG_LEVEL')>1: print "Returning teams and time for specified game..."
         return teams
 

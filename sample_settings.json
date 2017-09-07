@@ -25,6 +25,7 @@
         "ENABLED": true,
         "TAG": "PREGAME THREAD:",
         "TIME": "9AM",
+        "SUPPRESS_MINUTES": 0,
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
         "FLAIR": "",

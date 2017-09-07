@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.5.0
+### Current Version: 4.5.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -16,17 +16,19 @@ This project contains a bot to post off day, pregame, game, and postgame discuss
 
 #### OAuth Setup
 
-Go to reddit.com’s app page (https://www.reddit.com/prefs/apps), click on the “are you a developer? create an app” button. Fill out the name, description and about url. Name must be filled out, but the rest doesn’t matter. Write whatever you please. For redirect uri set it to `http://localhost:8080`. All four variables can be changed later.
+Go to reddit.com’s app page (https://www.reddit.com/prefs/apps), click on the “are you a developer? create an app” button. Fill out the name, description and about url. Enter whatever you please for name, `http://localhost:8080` for redirect uri, and the rest don't really matter. All of these variables can be changed later.
 
-Next, open setup.py, fill in the `client_id`, `client_secret` and `redirect_uri` fields from your Reddit app and run the script. Your browser will open. Make sure you are logged in to Reddit as the user you want the bot to run as, and click allow on the displayed web page. 
+Next, copy `sample_settings.json` to the `src` folder and rename it to `settings.json`. Open `/src/settings.json` with a text editor, fill in the `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` fields from your Reddit app, and run the `setup_oauth.py` script. 
 
-Enter the code (everything after code=) from the URL in the browser address bar into the console and your refresh token will be displayed. Copy the refresh token for the next step.
+Your browser will open and take you to a Reddit app authorization page. Make sure you are logged in to Reddit as the user you want the bot to run as, and click allow on the displayed web page. 
 
-Finally, copy `sample_settings.json` to the `src` folder and rename it to `settings.json`. Fill in the `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`, and `REFRESH_TOKEN` fields in the settings.json file and save. 
+Copy the code (everything after code=) from the URL in the browser address bar, paste it into the console, and press Enter. Your refresh token will be displayed. Copy the refresh token into `/src/settings.json` and save. 
+
+That's it for the oauth setup! Now configure the rest of your settings (or leave the defaults) and run `/src/main.py` to start your bot.
 
 #### Configuration Settings
 
-The following settings can be configured in `src/settings.json`:
+The following settings can be configured in `/src/settings.json`:
 
 * `CLIENT_ID`, `CLIENT_SECRET`, `REDIRECT_URI`, `REFRESH_TOKEN` - these are used to authenticate with the Reddit API. See `OAuth Setup` section above
 
@@ -115,6 +117,10 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.5.1
+* Truncated change log prior to the start of this fork (v4.0.0)
+* Updated `setup_oauth.py` to read from /src/settings.json rather than requiring hard-coded values; updated instructions in `README.md`
 
 #### v4.5.0
 * Added `SUPPRESS_MINUTES` option under `PRE_THREAD` section. Pregame thread will be suppressed if game thread will be posted within this number of minutes. Default is 0 (suppress if it is already time to post the game thread), use -1 to disable suppression
@@ -243,35 +249,3 @@ Modules being used:
 * Adjusted default values in `sample_settings.json` to turn on offday/pre/post threads, set game thread post time to 3 hours, enable baseball.theater link in post threads, and include footer text for game threads.
 * Improved loading/validation of settings and error handling on startup. All settings will be validated rather than aborting on the first missing setting. Also added default values for most settings except those related to oauth, subreddit, and team code. Other missing settings will use default values and log a warning.
 * Added settings*.json and main-*.py to .gitignore, to make it easier to switch between config files and have a test version of main.py
-
----
-### Change Log Prior to This Fork
-
-#### v3.0.2
-* GUI added (but does not include all settings and is not supported in this fork)
-
-#### v3.0.1
-* Now uses OAuth!
-
-#### v3.0.0
-* Modular - If you want a certain feature, just change a variable at the top!
-* Easier to read - Cleaned up some code, started using more OOP.
-
-#### v2.0.4
-* Fixed crash caused by game not being aired on TV.
-* Fixed another crash related to scoring plays.
-
-#### v2.0.3
-* Fixed the Diamondbacks' subreddit not working properly.
-* Fixed crash related to scoring plays.
-
-#### v2.0.2
-
-* Fixed random crashing.
-* Fixed bug where some teams names were not displayed correctly. (Though Chi White Sox White Sox is a great name...)
-
-#### v2.0.1
-
-* Fixed gamecheck not always working correctly.
-* Fixed the TV media showing the same for both home and away.
-* Fixed the timestamp on the game/time checks not displaying correctly.

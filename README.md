@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.5.1
+### Current Version: 4.5.2
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -117,6 +117,9 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.5.2
+* Fixed matchup image URL not working for teams whose name_abbrev is different than their file_code (e.g. wsh vs was)
 
 #### v4.5.1
 * Truncated change log prior to the start of this fork (v4.0.0)

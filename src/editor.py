@@ -63,12 +63,10 @@ class Editor:
         temp_dirs.append(games[gameid].get('url') + "gamecenter.xml")
         files = self.download_pre_files(temp_dirs)
         game = files["linescore"].get('data').get('game')
-        homecode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('home_code'))
-        awaycode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('away_code'))
         if othergameid:
-            code += "##[Game " + games[gameid].get('gamenum') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)\n"
+            code += "##[Game " + games[gameid].get('gamenum') + "](http://mlb.mlb.com/images/2017_ipad/684/" + game.get('away_file_code') + game.get('home_file_code') + "_684.jpg)\n"
         else:
-            code += "##[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)\n"
+            code += "##[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + game.get('away_file_code') + game.get('home_file_code') + "_684.jpg)\n"
         
         if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'):
             code = code + self.generate_blurb(files, self.get_homeaway(self.SETTINGS.get('TEAM_CODE'),games[gameid].get('url')))
@@ -308,9 +306,7 @@ class Editor:
                 myteamis = "home"
             elif game.get('away_code') == self.SETTINGS.get('TEAM_CODE'):
                 myteamis = "away"
-            homecode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('home_code'))
-            awaycode = self.lookup_team_info(field='name_abbrev', lookupfield='team_code', lookupval=game.get('away_code'))
-            matchup = "[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + awaycode.lower() + homecode.lower() + "_684.jpg)"
+            matchup = "[" + game.get('away_team_name') + " @ " + game.get('home_team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + game.get('away_file_code') + game.get('home_file_code') + "_684.jpg)"
             if game.get('status') in ['Preview', 'Pre-Game']:
                 header += "##" + matchup + "\n"
                 if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): header += self.generate_blurb(files,myteamis)

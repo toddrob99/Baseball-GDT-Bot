@@ -2,7 +2,7 @@
 
 import urllib2
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import simplejson as json
 
 class TimeCheck:
@@ -58,8 +58,8 @@ class TimeCheck:
                 odate_object = datetime.strptime(otimestring, "%Y/%m/%d %I:%M %p")
                 if self.log_level>2: print "Doubleheader Game 2 start time:",date_object,"; Game 1 start time:",odate_object
                 if odate_object > date_object: #game 1 start time is after game 2 start time
-                    if self.log_level>1: print "Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3 hours for Game 2..."
-                    date_object = odate_object.replace(hour=odate_object.hour+3) #use game 1 start time + 3 hours for game 2 start time
+                    if self.log_level>1: print "Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3.5 hours for Game 2..."
+                    date_object = odate_object + timedelta(hours=3, minutes=30) #use game 1 start time + 3.5 hours for game 2 start time
                     if self.log_level>2: print "Game 2 start time:",date_object,"; Game 1 start time:",odate_object
         if just_get_time: return date_object.replace(hour=date_object.hour - self.time_before/60/60)
         while True:

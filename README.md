@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.5.2
+### Current Version: 4.5.3
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -117,6 +117,13 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.5.3
+* Fixed next game lookup skipping a day when the current game ends after midnight, or skipping doubleheader game 2 (#49)
+* Updated start time adjustment for straight doubleheader game 2 to use game 1 start time + 3.5 hours instead of 3 hours, and changed from .replace() to the more appropriate timedelta
+* Doubleheader game 2 will no longer show 3:33 AM first pitch in pregame thread or game thraed, instead will show game 1 start + 3.5 hours
+* Fixed log entry in `generate_description()` exception handler
+* Minor logging adjustments
 
 #### v4.5.2
 * Fixed matchup image URL not working for teams whose name_abbrev is different than their file_code (e.g. wsh vs was)

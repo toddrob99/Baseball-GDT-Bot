@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.5.2'
+        self.VERSION = '4.5.3'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -643,7 +643,7 @@ class Bot:
 
             if len(games) == 0:
                 next_game = edit.next_game(30)
-                if not next_game.get('days_away'):
+                if next_game.get('days_away')==None:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "No games in the next 30 days. It's the off season..."
                     offseason = True
                 elif next_game.get('days_away') > 14:
@@ -665,7 +665,7 @@ class Bot:
                 timechecker.pregamecheck(self.SETTINGS.get('OFF_THREAD').get('TIME'))
                 offday.update({'offtitle': self.SETTINGS.get('OFF_THREAD').get('TAG') + " " + datetime.strftime(datetime.today(), "%A, %B %d"), 'offmessage' : self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 if next_game.get('date'): 
-                    next = edit.generate_next_game(next_game)
+                    next = edit.generate_next_game(next_game=next_game)
                     if len(self.SETTINGS.get('OFF_THREAD').get('FOOTER')): next += "\n\n"
                     offday.update({'offmessage' : next + self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 else: 

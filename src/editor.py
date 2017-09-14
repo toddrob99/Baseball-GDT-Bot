@@ -111,27 +111,45 @@ class Editor:
             root = files["gamecenter"].getroot()
             probables_xml = root.find('probables')
             pitchers['away']['firstname'] = probables_xml.find("away/useName").text
+            if pitchers['away']['firstname'] == None: pitchers['away']['firstname'] = ""
             pitchers['away']['lastname'] = probables_xml.find("away/lastName").text
+            if pitchers['away']['lastname'] == None: pitchers['away']['lastname'] = ""
             pitchers['away']['player_id'] = probables_xml.find("away/player_id").text
+            if pitchers['away']['player_id'] == None: pitchers['away']['player_id'] = ""
             pitchers['away']['wins'] = probables_xml.find("away/wins").text
+            if pitchers['away']['wins'] == None: pitchers['away']['wins'] = ""
             pitchers['away']['losses'] = probables_xml.find("away/losses").text
+            if pitchers['away']['losses'] == None: pitchers['away']['losses'] = ""
             pitchers['away']['era'] = probables_xml.find("away/era").text
+            if pitchers['away']['era'] == None: pitchers['away']['era'] = ""
             pitchers['away']['report'] = probables_xml.find("away/report").text
+            if pitchers['away']['report'] == None: pitchers['away']['report'] = "No report posted."
             pitchers['home']['firstname'] = probables_xml.find("home/useName").text
+            if pitchers['home']['firstname'] == None: pitchers['home']['firstname'] = ""
             pitchers['home']['lastname'] = probables_xml.find("home/lastName").text
+            if pitchers['home']['lastname'] == None: pitchers['home']['lastname'] = ""
             pitchers['home']['player_id'] = probables_xml.find("home/player_id").text
+            if pitchers['home']['player_id'] == None: pitchers['home']['player_id'] = ""
             pitchers['home']['wins'] = probables_xml.find("home/wins").text
+            if pitchers['home']['wins'] == None: pitchers['home']['wins'] = ""
             pitchers['home']['losses'] = probables_xml.find("home/losses").text
+            if pitchers['home']['losses'] == None: pitchers['home']['losses'] = ""
             pitchers['home']['era'] = probables_xml.find("home/era").text
+            if pitchers['home']['era'] == None: pitchers['home']['era'] = ""
             pitchers['home']['report'] = probables_xml.find("home/report").text
+            if pitchers['home']['report'] == None: pitchers['home']['report'] = "No report posted."
 
             away_pitcher = pitchers['away']['firstname'] + " " + pitchers['away']['lastname']
-            away_pitcher = "[" + away_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['away']['player_id'] + ")"
-            away_pitcher += " (" + pitchers['away']['wins'] + "-" + pitchers['away']['losses'] + ", " + pitchers['away']['era'] + ")"
+            if away_pitcher == " ": away_pitcher = "TBA"
+            else:
+                away_pitcher = "[" + away_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['away']['player_id'] + ")"
+                away_pitcher += " (" + pitchers['away']['wins'] + "-" + pitchers['away']['losses'] + ", " + pitchers['away']['era'] + ")"
 
             home_pitcher = pitchers['home']['firstname'] + " " + pitchers['home']['lastname']
-            home_pitcher = "[" + home_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['home']['player_id'] + ")"
-            home_pitcher += " (" + pitchers['home']['wins'] + "-" + pitchers['home']['losses'] + ", " + pitchers['home']['era'] + ")"
+            if home_pitcher == " ": home_pitcher = "TBA"
+            else:
+                home_pitcher = "[" + home_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + pitchers['home']['player_id'] + ")"
+                home_pitcher += " (" + pitchers['home']['wins'] + "-" + pitchers['home']['losses'] + ", " + pitchers['home']['era'] + ")"
 
             probables  = " |Pitcher|Report\n"
             probables += "-|-|-\n"
@@ -141,7 +159,7 @@ class Editor:
 
             return probables
         except:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for probables, returning empty string..."
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for probables, returning partial or empty string..."
             return probables
 
     def generate_pre_first_pitch(self,files,ofiles=None):

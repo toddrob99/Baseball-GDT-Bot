@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.5.3'
+        self.VERSION = '4.5.4'
         self.SETTINGS = {}
 
     def read_settings(self):

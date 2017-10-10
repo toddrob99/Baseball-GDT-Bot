@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.5.4
+### Current Version: 4.5.5
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -80,7 +80,7 @@ The following settings can be configured in `/src/settings.json`:
 	* `EXTRA_SLEEP` - do you want the bot to sleep longer than 5 seconds between game thread edits? set this to the number of seconds (e.g. 25 for a total sleep of 30 seconds; default: 0)
 	* `CONTENT` - what to include in the body of the post
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS`, `CURRENT_STATE`, `UPDATE_STAMP` - sections to include in the post (true/false)
-		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
+		* `FOOTER` - text to include at the end of the post ("Remember to \*\*sort by new\*\* to keep up!")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
 		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
@@ -96,7 +96,7 @@ The following settings can be configured in `/src/settings.json`:
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Postgame Thread")
 	* `CONTENT` - what to include in the body of the post
 		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
-		* `FOOTER` - text to include at the end of the post ("\*\*Remember to sort by new to keep up!\*\*")
+		* `FOOTER` - text to include at the end of the post ("Remember to \*\*sort by new\*\* to keep up!")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `NEXT_GAME` - include next game date/time/opponent in the postgame thread (true/false)
 
@@ -117,6 +117,12 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v4.5.5
+* Fixed logging around detection of next game
+* Adjusted default value for game thread footers (bold only "sort by new" instead of the whole string)
+* Fixed #53, bot will now skip games with placeholder opponents (e.g. `AL Div. Winner 3 or WC`)
+* When determining next game, bot will now skip games with placeholder opponents unless there are no games with a valid opponent on the same day. This happens when a team clinches a berth prior to their next opponent.
 
 #### v4.5.4
 * Fixed #48, missing probable pitcher table if any piece of data is not posted (e.g. one team doesn't post a probable pitcher, or no report posted for one of the probable pitchers)

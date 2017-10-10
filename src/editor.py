@@ -852,10 +852,11 @@ class Editor:
     def next_game(self,check_days=14,thisurl=""):
         if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for next game..."
         if thisurl==None: thisurl=""
-        next_game = {}
         base_url = "http://gd2.mlb.com/components/game/mlb/"
         today = datetime.today().date()
         for d in (today + timedelta(days=x) for x in range(0, check_days)):
+            next_game = {}
+            if self.SETTINGS.get('LOG_LEVEL')>3: print "Searching for games on",d
             url = base_url + d.strftime("year_%Y/month_%m/day_%d/")
             response = ""
             while not response:
@@ -867,18 +868,38 @@ class Editor:
 
             html = response.readlines()
             directories = []
+            ngind = 0
             for v in html:
                 if self.SETTINGS.get('TEAM_CODE') + 'mlb' in v:
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
                     v = v[v.index("\"") + 1:len(v)]
                     v = v[0:v.index("\"")]
                     if (url+v) != thisurl:
                         if v[-2:-1]=='2' and url+v[:-2]!=thisurl[:-2]: continue
                         else:
-                            next_game.update({'url' : url + v, 'date' : d, 'days_away' : (d - today).days})
-                            return next_game
+                            next_game[ngind] = {'url' : url + v, 'date' : d, 'days_away' : (d - today).days}
+                            ngind += 1
+
+            if len(next_game)==0:
+                if self.SETTINGS.get('LOG_LEVEL')>3: print "No games found on",d
+            else:
+                if self.SETTINGS.get('LOG_LEVEL')>3: print "next_game found game(s):",next_game
+                for ngk,ng in next_game.items():
+                    dirparts = ng.get('url').replace(url,"").split("_")
+                    for part in dirparts:
+                        if 'mlb' in part and self.SETTINGS.get('TEAM_CODE') + 'mlb' not in part:
+                            opponent = part[:3]
+                            if self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=opponent)==None:
+                                if self.SETTINGS.get('LOG_LEVEL')>2: print "Found game with placeholder opponent, skipping " + ng.get('url').replace(url,"") + "..."
+                            else:
+                                if self.SETTINGS.get('LOG_LEVEL')>3: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game:",ng.get('url').replace(url,"")
+                                if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
+                                return ng
+                if url[url.find("year"):] == thisurl[thisurl.find("year"):thisurl.find("gid")]: continue
+                else:
+                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game lookup found only games with placeholder opponents, returning the first one..."
+                    return next_game[0]
         if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in next",check_days,"days..."
-        return next_game
+        return {}
 
     def last_game(self,check_days):
         if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for last game..."

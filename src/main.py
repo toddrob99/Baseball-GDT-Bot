@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '4.5.4'
+        self.VERSION = '4.5.5'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -584,7 +584,14 @@ class Bot:
                 if self.SETTINGS.get('TEAM_CODE') + 'mlb' in v:
                     v = v[v.index("\"") + 1:len(v)]
                     v = v[0:v.index("\"")]
-                    directories.append(url + v)
+                    dirparts = v.split("_")
+                    for part in dirparts:
+                        if 'mlb' in part and self.SETTINGS.get('TEAM_CODE') + 'mlb' not in part:
+                            opponent = part[:3]
+                            if edit.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=opponent)==None:
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "Found game with placeholder opponent, skipping " + v + "..."
+                            else:
+                                directories.append(url + v)
 
             if len(offday): stale_games[0] = offday
             else: stale_games = games

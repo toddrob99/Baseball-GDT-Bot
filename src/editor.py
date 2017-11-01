@@ -37,6 +37,11 @@ class Editor:
         game = filething.get('data').get('game')
         timestring = game.get('time_date') + " " + game.get('ampm')
         date_object = datetime.strptime(timestring, "%Y/%m/%d %I:%M %p")
+        if self.SETTINGS.get('SERIES_IN_TITLES') and game.get('series') and game.get('series_num'):
+            title += game.get('series')
+            if int(game.get('ser_games')) > 1:
+                title += " Game " + game.get('series_num')
+            title += " - "
         title = title + game.get('away_team_name') + " (" + game.get('away_win') + "-" + game.get('away_loss') + ")"
         title = title + " @ "
         title = title + game.get('home_team_name') + " (" + game.get('home_win') + "-" + game.get('home_loss') + ")"
@@ -232,20 +237,38 @@ class Editor:
         return None
 
     def generate_blurb(self,files,homeaway='mlb'):
-        blurb = ""
+        blurb = headline = blurbtext = ""
         if homeaway not in ['home','away']:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Home or away not specified for blurb, using 'mlb'..."
             homeaway = 'mlb'
         try:
             root = files["gamecenter"].getroot()
             preview = root.find('previews').find(homeaway)
-            headline = preview.find('headline').text
-            blurbtext = preview.find('blurb').text
+            if not isinstance(preview.find('headline').text, type(None)):
+                headline = preview.find('headline').text
+            elif homeaway != 'mlb':
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "No",homeaway,"headline avaialble, using mlb headline..."
+                root2 = files["gamecenter"].getroot()
+                preview2 = root2.find('previews').find('mlb')
+                if not isinstance(preview2.find('headline').text, type(None)):
+                    headline = preview2.find('headline').text
+                else:
+                    if self.SETTINGS.get('LOG_LEVEL')>2: print "No mlb headline avaialble, using empty string..."
+            if not isinstance(preview.find('blurb').text, type(None)):
+                blurbtext = preview.find('blurb').text
+            elif homeaway != 'mlb':
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "No",homeaway,"blurb avaialble, using mlb blurb..."
+                root2 = files["gamecenter"].getroot()
+                preview2 = root2.find('previews').find('mlb')
+                if not isinstance(preview2.find('blurb').text, type(None)):
+                    blurbtext = preview2.find('blurb').text
+                else:
+                    if self.SETTINGS.get('LOG_LEVEL')>2: print "No mlb blurb avaialble, using empty string..."
 
             blurb = "**" + headline + "**\n\n" + blurbtext + "\n\n"
             return blurb
         except:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for blurb, returning empty string..."
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for blurb, returning partial or empty string..."
             return blurb
 
     def get_homeaway(self, team_code, url):
@@ -374,7 +397,7 @@ class Editor:
             header += "|**TV:** "
             if not isinstance(broadcast[0][0].text, type(None)):
                 header += broadcast[0][0].text
-            if not isinstance(broadcast[1][0].text, type(None)):
+            if not isinstance(broadcast[1][0].text, type(None)) and not broadcast[0][0].text == broadcast[1][0].text:
                 header += ", " + broadcast[1][0].text
             header += "|[Strikezone Map](http://www.brooksbaseball.net/pfxVB/zoneTrack.php?month=" + date_object.strftime(
                 "%m") + "&day=" + date_object.strftime("%d") + "&year=" + date_object.strftime(
@@ -611,10 +634,10 @@ class Editor:
         current_state = ""
         try:
             game = files["linescore"].get('data').get('game')
-            if game.get('status') not in ['In Progress','Delayed']:
+            if game.get('status') not in ['In Progress','Delayed','Delayed Start']:
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Game status is not In Progress or Delayed, returning empty string for current_state..."
                 return current_state
-            elif game.get('status') == 'Delayed':
+            elif game.get('status') in ['Delayed', 'Delayed Start']:
                 return "###Game is currently delayed...\n\n"
             elif game.get('status') == 'In Progress':
                 topbottom = game.get('inning_state') + " of the "
@@ -790,12 +813,14 @@ class Editor:
         next = ""
         if not next_game: next_game = self.next_game(7,url)
         if next_game.get('date'):
-            teams_time = self.get_teams_time(next_game.get('url'))
-            next += "**Next Game:** " + next_game.get('date').strftime("%A, %B %d") + ", " + teams_time.get('time')
-            if teams_time.get('away').get('team_code') == self.SETTINGS.get('TEAM_CODE'):
-                next += " @ " + teams_time.get('home').get('team_name')
+            if next_game.get('event_time') == '3:33 AM': next_game.update({'event_time' : 'Time TBD'})
+            next += "**Next Game:** " + next_game.get('date').strftime("%A, %B %d") + ", " + next_game.get('event_time')
+            if next_game.get('homeaway') == 'away':
+                next += " @ " + next_game.get('home_team_name')
             else:
-                next += " vs " + teams_time.get('away').get('team_name')
+                next += " vs " + next_game.get('away_team_name')
+            if next_game.get('series') and next_game.get('series_num'):
+                next += " (" + next_game.get('series') + " Game " + next_game.get('series_num') + ")"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning next game..."
             return next
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game not found, returning empty string..."
@@ -857,47 +882,53 @@ class Editor:
         for d in (today + timedelta(days=x) for x in range(0, check_days)):
             next_game = {}
             if self.SETTINGS.get('LOG_LEVEL')>3: print "Searching for games on",d
-            url = base_url + d.strftime("year_%Y/month_%m/day_%d/")
-            response = ""
-            while not response:
+            dayurl = base_url + d.strftime("year_%Y/month_%m/day_%d/")
+            gridurl = dayurl + "grid.json"
+            while True:
                 try:
-                    response = urllib2.urlopen(url)
-                except:
-                    if self.SETTINGS.get('LOG_LEVEL')>0: print "Couldn't find URL for next_game, retrying in 30 seconds..."
-                    time.sleep(30)
+                    gridresponse = urllib2.urlopen(gridurl)
+                except urllib2.HTTPError, e:
+                    if e.code == 404:
+                        daygames = {}
+                        break
+                    else:
+                        if self.SETTINGS.get('LOG_LEVEL')>0: print "Couldn't find URL for next game lookup, returning empty string..."
+                        return {}
+                else:
+                    daygames = json.load(gridresponse).get('data',{}).get('games',{}).get('game',{})
+                    break
 
-            html = response.readlines()
-            directories = []
-            ngind = 0
-            for v in html:
-                if self.SETTINGS.get('TEAM_CODE') + 'mlb' in v:
-                    v = v[v.index("\"") + 1:len(v)]
-                    v = v[0:v.index("\"")]
-                    if (url+v) != thisurl:
-                        if v[-2:-1]=='2' and url+v[:-2]!=thisurl[:-2]: continue
-                        else:
-                            next_game[ngind] = {'url' : url + v, 'date' : d, 'days_away' : (d - today).days}
-                            ngind += 1
+            i=0
+            if isinstance(daygames,dict): daygames = [daygames]
+            for daygame in daygames:
+                homeaway = None
+                if daygame.get('home_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'home'
+                if daygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'away'
+                if homeaway != None:
+                    gid = 'gid_' + daygame.get('id').replace('/','_').replace('-','_') + '/'
+                    if dayurl + gid != thisurl:
+                        if daygame.get('game_nbr')=='2' and dayurl+gid[:-2]!=thisurl[:-2]: continue
+                        else:                        
+                            next_game[i] = {'url' : dayurl+gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num')}
+                            i += 1
 
             if len(next_game)==0:
                 if self.SETTINGS.get('LOG_LEVEL')>3: print "No games found on",d
             else:
                 if self.SETTINGS.get('LOG_LEVEL')>3: print "next_game found game(s):",next_game
-                for ngk,ng in next_game.items():
-                    dirparts = ng.get('url').replace(url,"").split("_")
-                    for part in dirparts:
-                        if 'mlb' in part and self.SETTINGS.get('TEAM_CODE') + 'mlb' not in part:
-                            opponent = part[:3]
-                            if self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=opponent)==None:
-                                if self.SETTINGS.get('LOG_LEVEL')>2: print "Found game with placeholder opponent, skipping " + ng.get('url').replace(url,"") + "..."
-                            else:
-                                if self.SETTINGS.get('LOG_LEVEL')>3: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game:",ng.get('url').replace(url,"")
-                                if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
-                                return ng
-                if url[url.find("year"):] == thisurl[thisurl.find("year"):thisurl.find("gid")]: continue
-                else:
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game lookup found only games with placeholder opponents, returning the first one..."
-                    return next_game[0]
+                if len(next_game)>1:
+                    for ngk,ng in next_game.items():
+                        if (ng.get('homeaway')=='home' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('away_code'))==None) or (ng.get('homeaway')=='away' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('home_code'))==None):
+                            if self.SETTINGS.get('LOG_LEVEL')>2: print "Found game with placeholder opponent, skipping " + ng.get('url').replace(dayurl,"") + "..."
+                        else:
+                            if self.SETTINGS.get('LOG_LEVEL')>3: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game:",ng.get('url').replace(dayurl,"")
+                            if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
+                            return ng
+                    if dayurl[dayurl.find("year"):] == thisurl[thisurl.find("year"):thisurl.find("gid")]: continue
+                    else:
+                        if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game lookup found only games with placeholder opponents, returning the first one..."
+                        return next_game[0]
+                else: return next_game[0]
         if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in next",check_days,"days..."
         return {}
 

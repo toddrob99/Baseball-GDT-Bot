@@ -17,8 +17,7 @@ class TimeCheck:
         while True:
             check = datetime.today()
             if today.day != check.day:
-                if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p")
-                if self.log_level>1: print "NEW DAY"
+                if self.log_level>1: print datetime.strftime(check, "%d %I:%M:%S %p") + " NEW DAY"
                 return
             else:
                 if self.log_level>1: print "Last date check: " + datetime.strftime(check, "%d %I:%M:%S %p")

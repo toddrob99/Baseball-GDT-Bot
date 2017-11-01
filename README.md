@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 4.5.5
+### Current Version: 5.0.0
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -45,6 +45,8 @@ The following settings can be configured in `/src/settings.json`:
 * `STICKY` - do you want the threads stickied? bot must have mod rights. (true/false)
 
 * `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") **NOTE**: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
+
+* `SERIES_IN_TITLES` - do you want to include the postseason series info in the pre/game/post thread titles? e.g. "NLDS Game 4" (true/false)
 
 * `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info (default), 3 for debug, 4 for verbose debug)
 
@@ -118,6 +120,17 @@ Modules being used:
 ---
 ### Change Log
 
+#### v5.0.0
+* Re-wrote logic for finding games on MLB website. Instead of reading directory names, the bot will now use grid.json to determine if the configured team has any games on the given day (either "today" for purposes of posting offday/pre/game/post threads, or future days for looking up the next game). This was necessary because MLB publishes placeholder games for the entire postseason, and does not take them down when the teams are determined or the series does not need all 5/7 games. Placeholder games are removed from grid.json when they are no longer relevant, so this method is more accurate. (Issue #55)
+* Updates to use some fields directly from MLB data rather than determining on my own. For example, use double_header_sw instead of comparing directory names to identify doubleheaders, use game_nbr instead of pulling gamenum from the end of the directory name, use game info from grid.json in generate_next_game() instead of calling a separate function (teams_time())
+* Next game will now display "Time TBD" instead of 3:33 AM
+* Added series info to next game in game/post threads, when present (e.g. Next Game: Wednesday, October 11, 8:00 PM vs Yankees (ALDS Game 5))
+* Added series info to thread titles (e.g. "PREGAME THREAD: NLDS Game 4 - Nationals (1-2) @ Cubs (2-1) - October 10, 2017"). Turn off with `SERIES_IN_TITLES`=false (not thread-specific)
+* Removed support for deprecated settings. Default values will still be used for missing settings that do not trigger a fatal error.
+* TV station will no longer be duplicated in game/post thread header if it's the same for home and away teams (national games)
+* If team-specific game headline or blurb is missing, the generic game headline or blurb will be used instead of having no headline/blurb at all
+* Minor logging improvements
+
 #### v4.5.5
 * Fixed logging around detection of next game
 * Adjusted default value for game thread footers (bold only "sort by new" instead of the whole string)
@@ -130,7 +143,7 @@ Modules being used:
 #### v4.5.3
 * Fixed next game lookup skipping a day when the current game ends after midnight, or skipping doubleheader game 2 (#49)
 * Updated start time adjustment for straight doubleheader game 2 to use game 1 start time + 3.5 hours instead of 3 hours, and changed from .replace() to the more appropriate timedelta
-* Doubleheader game 2 will no longer show 3:33 AM first pitch in pregame thread or game thraed, instead will show game 1 start + 3.5 hours
+* Doubleheader game 2 will no longer show 3:33 AM first pitch in pregame thread or game thread, instead will show game 1 start + 3.5 hours
 * Fixed log entry in `generate_description()` exception handler
 * Minor logging adjustments
 

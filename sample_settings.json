@@ -10,6 +10,7 @@
     "TEAM_TIME_ZONE": "ET",
     "STICKY": true,
     "FLAIR_MODE": "none",
+    "SERIES_IN_TITLES": true,
     "LOG_LEVEL": 2,
     "OFF_THREAD": {
         "ENABLED": true,

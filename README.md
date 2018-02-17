@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.0.0
+### Current Version: 5.0.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
 
@@ -119,6 +119,14 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.0.1
+* Fixed error when looking up games on a given day, due to MLB server throwing an error when the URL has a trailing slash
+* Fixed broken game URLs due to MLB data not having game id populated in grid.json
+* Fixed error due to gamecenter.xml not existing yet and MLB servers throwing a new error
+* Fixed support for exhibition games against non-MLB teams (as long as their league code is bbc)
+* Suppressed game number in game/post thread footers for exhibition games ("Exhibition Game Game 0" -> "Exhibition Game")
+* Minor logging improvements
 
 #### v5.0.0
 * Re-wrote logic for finding games on MLB website. Instead of reading directory names, the bot will now use grid.json to determine if the configured team has any games on the given day (either "today" for purposes of posting offday/pre/game/post threads, or future days for looking up the next game). This was necessary because MLB publishes placeholder games for the entire postseason, and does not take them down when the teams are determined or the series does not need all 5/7 games. Placeholder games are removed from grid.json when they are no longer relevant, so this method is more accurate. (Issue #55)

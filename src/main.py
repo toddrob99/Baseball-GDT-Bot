@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '5.0.0'
+        self.VERSION = '5.0.1'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -448,11 +448,11 @@ class Bot:
                 except:
                     pass
             if self.SETTINGS.get('LOG_LEVEL')>2: print "stale games:",stale_games
-            
+
             today = datetime.today()
+            #today = datetime.strptime('2018-02-23','%Y-%m-%d') # leave commented unless testing
 
             baseurl = "http://gd2.mlb.com/components/game/mlb/"
-            #todayurl = baseurl + "year_2017/month_10/day_09/" #for testing purposes - comment below line when using this
             todayurl = baseurl + "year_" + today.strftime("%Y") + "/month_" + today.strftime("%m") + "/day_" + today.strftime("%d") + "/"
             gridurl = todayurl + "grid.json"
 
@@ -486,7 +486,19 @@ class Bot:
                 if todaygame.get('home_code') == self.SETTINGS.get('TEAM_CODE') or todaygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'):
                     games[i] = todaygame
                     games[i].pop('game_media') #remove some clutter
+                    games[i].pop('newsroom') #remove some clutter
+                    homeaway = None
+                    if todaygame.get('home_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'home'
+                    if todaygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'away'
+                    if homeaway != None: games[i].update({'homeaway' : homeaway})
                     gid = 'gid_' + todaygame.get('id').replace('/','_').replace('-','_') + '/'
+                    if gid == 'gid_/':
+                        if homeaway == 'home' and todaygame.get('series') == 'Exhibition Game':
+                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'bbc_' + todaygame.get('home_code') + 'mlb_' + todaygame.get('game_nbr') + '/'
+                        elif homeaway == 'away' and todaygame.get('series') == 'Exhibition Game':
+                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'mlb_' + todaygame.get('home_code') + 'bbc_' + todaygame.get('game_nbr') + '/'
+                        else:
+                            gid = 'gid_' + today.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'mlb_' + todaygame.get('home_code') + 'mlb_' + todaygame.get('game_nbr') + '/'
                     games[i].update({'url' : todayurl + gid, 'final' : False})
                     if todaygame.get('double_header_sw') != 'N':
                         games[i].update({'doubleheader' : True})

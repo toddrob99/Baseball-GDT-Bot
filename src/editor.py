@@ -102,8 +102,12 @@ class Editor:
         files = dict()
         response = urllib2.urlopen(dirs[0])
         files["linescore"] = json.load(response)
-        response = urllib2.urlopen(dirs[1])
-        files["gamecenter"] = ET.parse(response)
+        try:
+            response = urllib2.urlopen(dirs[1])
+            files["gamecenter"] = ET.parse(response)
+        except:
+            files["gamecenter"] = ET.Element("root")
+        
         return files
 
     def generate_probables(self,files):
@@ -820,7 +824,10 @@ class Editor:
             else:
                 next += " vs " + next_game.get('away_team_name')
             if next_game.get('series') and next_game.get('series_num'):
-                next += " (" + next_game.get('series') + " Game " + next_game.get('series_num') + ")"
+                next += " (" + next_game.get('series') 
+                if next_game.get('series_num') != '0':
+                    next += " Game " + next_game.get('series_num')
+                next += ")"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning next game..."
             return next
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game not found, returning empty string..."
@@ -879,11 +886,12 @@ class Editor:
         if thisurl==None: thisurl=""
         base_url = "http://gd2.mlb.com/components/game/mlb/"
         today = datetime.today().date()
+        #today = datetime.strptime('2018-02-23','%Y-%m-%d').date() # leave commented unless testing
         for d in (today + timedelta(days=x) for x in range(0, check_days)):
             next_game = {}
             if self.SETTINGS.get('LOG_LEVEL')>3: print "Searching for games on",d
-            dayurl = base_url + d.strftime("year_%Y/month_%m/day_%d/")
-            gridurl = dayurl + "grid.json"
+            dayurl = base_url + d.strftime("year_%Y/month_%m/day_%d")
+            gridurl = dayurl + "/grid.json"
             while True:
                 try:
                     gridresponse = urllib2.urlopen(gridurl)
@@ -906,10 +914,17 @@ class Editor:
                 if daygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'away'
                 if homeaway != None:
                     gid = 'gid_' + daygame.get('id').replace('/','_').replace('-','_') + '/'
-                    if dayurl + gid != thisurl:
-                        if daygame.get('game_nbr')=='2' and dayurl+gid[:-2]!=thisurl[:-2]: continue
+                    if gid == 'gid_/':
+                        if homeaway == 'home' and daygame.get('series') == 'Exhibition Game':
+                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + daygame.get('away_code') + 'bbc_' + daygame.get('home_code') + 'mlb_' + daygame.get('game_nbr') + '/'
+                        elif homeaway == 'away' and daygame.get('series') == 'Exhibition Game':
+                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + daygame.get('away_code') + 'mlb_' + daygame.get('home_code') + 'bbc_' + daygame.get('game_nbr') + '/'
+                        else:
+                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + daygame.get('away_code') + 'mlb_' + daygame.get('home_code') + 'mlb_' + daygame.get('game_nbr') + '/'
+                    if dayurl + "/" + gid != thisurl:
+                        if daygame.get('game_nbr')=='2' and dayurl+ "/" +gid[:-2]!=thisurl[:-2]: continue
                         else:                        
-                            next_game[i] = {'url' : dayurl+gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num')}
+                            next_game[i] = {'url' : dayurl+ "/" +gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num')}
                             i += 1
 
             if len(next_game)==0:
@@ -939,7 +954,8 @@ class Editor:
         base_url = "http://gd2.mlb.com/components/game/mlb/"
         today = datetime.today().date()
         for d in (today - timedelta(days=x) for x in range(1, check_days)):
-            url = base_url + d.strftime("year_%Y/month_%m/day_%d/")
+            if self.SETTINGS.get('LOG_LEVEL')>3: print "Searching for games on",d
+            url = base_url + d.strftime("year_%Y/month_%m/day_%d")
             response = ""
             while not response:
                 try:
@@ -955,8 +971,10 @@ class Editor:
                     if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found last game",(today-d).days,"day(s) ago on",d.strftime('%m/%d/%Y') + "..."
                     v = v[v.index("\"") + 1:len(v)]
                     v = v[0:v.index("\"")]
-                    last_game.update({'url' : url + v, 'date' : d, 'days_ago' : (today-d).days})
+                    last_game.update({'url' : url + "/" + v, 'date' : d, 'days_ago' : (today-d).days})
                     return last_game
+                else:
+                    if self.SETTINGS.get('LOG_LEVEL')>3: print "No games found on",d
         if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in last",check_days,"days..."
         return last_game
 

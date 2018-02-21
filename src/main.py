@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '5.0.1'
+        self.VERSION = '5.0.2'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -450,7 +450,7 @@ class Bot:
             if self.SETTINGS.get('LOG_LEVEL')>2: print "stale games:",stale_games
 
             today = datetime.today()
-            #today = datetime.strptime('2018-02-23','%Y-%m-%d') # leave commented unless testing
+            #today = datetime.strptime('2018-02-22','%Y-%m-%d') # leave commented unless testing
 
             baseurl = "http://gd2.mlb.com/components/game/mlb/"
             todayurl = baseurl + "year_" + today.strftime("%Y") + "/month_" + today.strftime("%m") + "/day_" + today.strftime("%d") + "/"
@@ -485,8 +485,8 @@ class Bot:
             for todaygame in todaygames:
                 if todaygame.get('home_code') == self.SETTINGS.get('TEAM_CODE') or todaygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'):
                     games[i] = todaygame
-                    games[i].pop('game_media') #remove some clutter
-                    games[i].pop('newsroom') #remove some clutter
+                    games[i].pop('game_media',None) #remove some clutter
+                    games[i].pop('newsroom',None) #remove some clutter
                     homeaway = None
                     if todaygame.get('home_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'home'
                     if todaygame.get('away_code') == self.SETTINGS.get('TEAM_CODE'): homeaway = 'away'
@@ -494,9 +494,9 @@ class Bot:
                     gid = 'gid_' + todaygame.get('id').replace('/','_').replace('-','_') + '/'
                     if gid == 'gid_/':
                         if homeaway == 'home' and todaygame.get('series') == 'Exhibition Game':
-                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'bbc_' + todaygame.get('home_code') + 'mlb_' + todaygame.get('game_nbr') + '/'
+                            gid = 'gid_' + today.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'bbc_' + todaygame.get('home_code') + 'mlb_' + todaygame.get('game_nbr') + '/'
                         elif homeaway == 'away' and todaygame.get('series') == 'Exhibition Game':
-                            gid = 'gid_' + d.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'mlb_' + todaygame.get('home_code') + 'bbc_' + todaygame.get('game_nbr') + '/'
+                            gid = 'gid_' + today.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'mlb_' + todaygame.get('home_code') + 'bbc_' + todaygame.get('game_nbr') + '/'
                         else:
                             gid = 'gid_' + today.strftime("%Y_%m_%d_") + todaygame.get('away_code') + 'mlb_' + todaygame.get('home_code') + 'mlb_' + todaygame.get('game_nbr') + '/'
                     games[i].update({'url' : todayurl + gid, 'final' : False})
@@ -977,7 +977,7 @@ class Bot:
                 for sk,sgame in games.items():
                     if sgame.get('gamesub') and not sgame.get('final'):
                         activegames += 1
-                        if sgame.get('status') in ['Preview','Pre-Game']:
+                        if sgame.get('status') in ['Preview','Pre-Game','Scheduled']:
                             previewgames += 1
                         if sgame.get('status') in ['Delayed', 'Delayed Start']:
                             delayedgames += 1
@@ -993,7 +993,7 @@ class Bot:
                 limits = r.auth.limits
                 if limits.get('used') > maxapi: maxapi = limits.get('used')
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Reddit API Calls:",limits,"- Max usage today:",maxapi
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Active Games:",activegames,"...in Preview/Pre-Game Status:",previewgames,"...in Delayed Status:",delayedgames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
+                if self.SETTINGS.get('LOG_LEVEL')>2: print "Active Games:",activegames,"...in Preview/Pre-Game/Scheduled Status:",previewgames,"...in Delayed Status:",delayedgames,"- Pending Games:",pendinggames,"- Completed Games:",completedgames
 
                 if activegames == 0 and pendinggames == 0:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "All games final for today (or off day), going into end of day loop... "
@@ -1002,10 +1002,10 @@ class Bot:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"No game threads to post yet, sleeping for 10 minutes... "
                     time.sleep(600)
                 elif activegames > 0 and previewgames == activegames:
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game status, sleeping for 5 minutes... "
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game/Scheduled status, sleeping for 5 minutes... "
                     time.sleep(300)
                 elif activegames > 0 and (delayedgames + previewgames) == activegames:
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game or Delayed status, sleeping for 1 minute... "
+                    if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(check, "%d %I:%M:%S %p"),"All posted games are in Preview/Pre-Game/Scheduled or Delayed status, sleeping for 1 minute... "
                     time.sleep(60)
                 elif limits.get('remaining') < 60:
                     if self.SETTINGS.get('LOG_LEVEL')>0: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Approaching Reddit API rate limit. Taking a 10 second break..."

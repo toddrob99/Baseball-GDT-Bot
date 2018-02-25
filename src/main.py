@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '5.0.2'
+        self.VERSION = '5.0.3'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -616,7 +616,7 @@ class Bot:
                     if self.SETTINGS.get('LOG_LEVEL')>0: print "Error posting off day thread:",err
             elif not self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(games) == 0:
                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Off day detected, but off day thread disabled."
-            elif offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON'):
+            elif offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON') and len(games) == 0:
                 if self.SETTINGS.get('LOG_LEVEL')>1: print "Suppressing off day thread during off season..."
 
             if self.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(games) > 0:

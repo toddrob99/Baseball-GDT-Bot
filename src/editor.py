@@ -328,18 +328,44 @@ class Editor:
         try:
             response = urllib2.urlopen(dirs[0])
             files["linescore"] = json.load(response)
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading linescore.json:",str(e)
+            files["linescore"] = {}
+
+        try:
             response = urllib2.urlopen(dirs[1])
             files["gamecenter"] = ET.parse(response)
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading gamecenter.xml:",str(e)
+            files["gamecenter"] = ET.Element("root")
+
+        try:
             response = urllib2.urlopen(dirs[2])
             files["boxscore"] = json.load(response)
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading boxscore.json:",str(e)
+            files["boxscore"] = {}
+
+        try:
             response = urllib2.urlopen(dirs[3])
             files["plays"] = json.load(response)
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading plays.json:",str(e)
+            files["plays"] = {}
+
+        try:
             response = urllib2.urlopen(dirs[4])
             files["scores"] = ET.parse(response)
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading scores.xml:",str(e)
+            files["scores"] = ET.Element("root")
+
+        try:
             response = urllib2.urlopen(dirs[5])
             files["highlights"] = ET.parse(response)
-        except Exception as e:
-            if self.SETTINGS.get('LOG_LEVEL')>1: print e
+        except Exception,e:
+            if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading highlights.xml:",str(e)
+            files["highlights"] = ET.Element("root")
 
         return files
 
@@ -379,7 +405,7 @@ class Editor:
                 if game.get('description',False) and game.get('status') == 'Preview': header += "**Game Note:** " + game.get('description') + "\n\n"
                 if game.get('status') == 'Preview': header += "[Preview](http://mlb.mlb.com/mlb/gameday/index.jsp?gid=" + game.get('gameday_link') + ")\n\n"
                 header += "\n"
-            weather = files["plays"].get('data').get('game').get('weather')
+            weather = files["plays"].get('data',{"game":{"weather":{"condition":"","wind":"","temp":""}}}).get('game').get('weather')
             root = files["gamecenter"].getroot()
             broadcast = root.find('broadcast')
             notes = self.get_notes(game.get('home_team_name'), game.get('away_team_name'))
@@ -417,7 +443,8 @@ class Editor:
             header += "\n\n"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning header..."
             return header
-        except:
+        except Exception, e:
+            if self.SETTINGS.get('LOG_LEVEL')>3: print "Caught exception in generate_header():",str(e)
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Missing data for header, returning partial header or empty string..."
             return header
 
@@ -825,7 +852,7 @@ class Editor:
                 next += " vs " + next_game.get('away_team_name')
             if next_game.get('series') and next_game.get('series_num'):
                 next += " (" + next_game.get('series') 
-                if next_game.get('series_num') != '0':
+                if next_game.get('series_num') != '0' and next_game.get('series') != 'Spring Training':
                     next += " Game " + next_game.get('series_num')
                 next += ")"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning next game..."
@@ -923,7 +950,7 @@ class Editor:
                             gid = 'gid_' + d.strftime("%Y_%m_%d_") + daygame.get('away_code') + 'mlb_' + daygame.get('home_code') + 'mlb_' + daygame.get('game_nbr') + '/'
                     if dayurl + "/" + gid != thisurl:
                         if daygame.get('game_nbr')=='2' and dayurl+ "/" +gid[:-2]!=thisurl[:-2]: continue
-                        else:                        
+                        else:
                             next_game[i] = {'url' : dayurl+ "/" +gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num')}
                             i += 1
 

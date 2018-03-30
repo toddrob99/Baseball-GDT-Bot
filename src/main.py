@@ -29,7 +29,7 @@ import urllib2
 class Bot:
 
     def __init__(self):
-        self.VERSION = '5.0.3'
+        self.VERSION = '5.0.4'
         self.SETTINGS = {}
 
     def read_settings(self):
@@ -752,7 +752,7 @@ class Bot:
 
             while len(games) > 0:
                 for k,game in games.items():
-                    if self.SETTINGS.get('LOG_LEVEL')>1 and len(games)>1: print "Game",k,"check"
+                    if self.SETTINGS.get('LOG_LEVEL')>2 and len(games)>1: print "Game",k,"check"
                     for otherk,othergame in games.items():
                         if othergame.get('url')[:-2] == game.get('url')[:-2] and othergame.get('url') != game.get('url'): break
                     if not othergame.get('doubleheader'): othergame = {}

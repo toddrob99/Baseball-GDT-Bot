@@ -850,7 +850,7 @@ class Editor:
                 next += " @ " + next_game.get('home_team_name')
             else:
                 next += " vs " + next_game.get('away_team_name')
-            if next_game.get('series') and next_game.get('series_num'):
+            if next_game.get('series') and next_game.get('series_num') and next_game.get('game_type') != 'R':
                 next += " (" + next_game.get('series') 
                 if next_game.get('series_num') != '0' and next_game.get('series') != 'Spring Training':
                     next += " Game " + next_game.get('series_num')
@@ -951,7 +951,7 @@ class Editor:
                     if dayurl + "/" + gid != thisurl:
                         if daygame.get('game_nbr')=='2' and dayurl+ "/" +gid[:-2]!=thisurl[:-2]: continue
                         else:
-                            next_game[i] = {'url' : dayurl+ "/" +gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num')}
+                            next_game[i] = {'url' : dayurl+ "/" +gid, 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : daygame.get('home_code'), 'away_code' : daygame.get('away_code'), 'home_team_name' : daygame.get('home_team_name'), 'away_team_name' : daygame.get('away_team_name'), 'event_time' : daygame.get('event_time'), 'series' : daygame.get('series'), 'series_num' : daygame.get('series_num'), 'game_type' : daygame.get('game_type')}
                             i += 1
 
             if len(next_game)==0:

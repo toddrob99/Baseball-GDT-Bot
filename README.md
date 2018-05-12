@@ -6,9 +6,9 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.0.4
+### Current Version: 5.1.0
 	
-This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API.
+This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
 ---
 
@@ -38,41 +38,61 @@ The following settings can be configured in `/src/settings.json`:
 
 * `TEAM_CODE` - three letter code that represents team - not always what you think (Cubs: CHN, Yankees: NYA)! look this up by running `lookup_team_code.py` and entering the team name (e.g. Phillies, Athletics, Cardinals), name abbreviation (e.g. CHC, STL, CWS), city (e.g. Chicago, Miami, Anaheim)
 
-* `BOT_TIME_ZONE` - time zone of the computer running the bot ("ET", "CT", "MT", "PT")
-
-* `TEAM_TIME_ZONE` - time zone of the team ("ET", "CT", "MT", "PT")
-
 * `STICKY` - do you want the threads stickied? bot must have mod rights. (true/false)
 
 * `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") **NOTE**: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
 
-* `SERIES_IN_TITLES` - do you want to include the postseason series info in the pre/game/post thread titles? e.g. "NLDS Game 4" (true/false)
-
 * `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info (default), 3 for debug, 4 for verbose debug)
+
+* `TWITTER` - holds OAuth fields for Twitter API connection
+	* `CONSUMER_KEY`, `CONSUMER_SECRET`, `ACCESS_TOKEN`, `ACCESS_SECRET` - all required to use Twitter features - follow the instructions at https://python-twitter.readthedocs.io/en/latest/getting_started.html
 
 * `OFF_THREAD` - offday thread settings
 	* `ENABLED` - do you want an off day thread on days when your team does not play? (true/false)
-	* `TAG` - prefix for the thread title ("OFF DAY THREAD:")
-	* `TIME` - time to post the offday thread ("8AM" in context of BOT_TIME_ZONE)
+	* `TITLE` - thread title. Team-related fields available through `lookup_team_info()` can be used, in the format `{myTeam:<field>}` (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). A list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27. The only other supported parameter is `{date:<format>}` with `<format>` including the variables listed on http://strftime.org/. Use `\{` or `\}` if you want to include `{` or `}` in your title. (Default: "OFF DAY THREAD: {date:%A, %B %d}")
+	* `TIME` - time to post the offday thread in bot's local time zone ("8AM")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Off Day Thread")
 	* `SUPPRESS_OFFSEASON` - do you want to suppress off day threads during the off season? (true/false)
 	* `FOOTER` - text to include in the body of the post, below the next game info ("No game today. Feel free to discuss whatever you want in this thread.")
+	* `TWITTER` - settings for tweeting off day thread link
+		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "The {myTeam:name} are off today. Come pass the time in our off day thread: {link} #{myTeam:name}")
 
 * `PRE_THREAD` - pregame thread settings
 	* `ENABLED` - do you want a pre game thread? (true/false)
-	* `TAG` - prefix for the thread title ("PREGAME THREAD:")
-	* `TIME` - time to post the pregame thread ("8AM" in context of BOT_TIME_ZONE)
+	* `TITLE` - thread title (Default: "PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+		* Team-related fields available through `lookup_team_info()` can be used in the below formats (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). In addition to `wins` and `losses`, list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27
+			* `{myTeam:<field>}` - fields related to team configured in `TEAM_CODE` setting (`myTeam` is the only team parameter available for off day thread)
+			* `{oppTeam:<field>}` - fields related to opponent team
+			* `{homeTeam:<field>}` - fields related to home team
+			* `{awayTeam:<field>}` - fields related to away team
+		* `{vsat}` - "@" when your team is away and "vs" when your team is home (not available for off day threads)
+		* `{date:%a %b %d @ %I:%M%p %Z}` where `%a %b %d @ %I:%M%p %Z` is the date format using the variables listed on http://strftime.org/ (`{date}` without format speficied will default to `%B %d, %Y`, e.g. `April 29, 2018`)
+		* `{gameNum}` which will always be 1 except game 2 of a doubleheader
+		* `{series: %D Game %N -}` - `%D` will be replaced with series description (e.g. `NLDS`, `World Series`), and `%N` will be replaced with series game number (e.g. `1`, `3`). be sure to include a space and/or separator on the beginning and end as needed
+		* `{dh: - DH Game %N}` - will be included in thread title only if game is a doubleheader. `%N` will be replaced with doubleheader game number, same value as `{gameNum}`
+		* Use `\{` or `\}` if you want to include `{` or `}` in your title
+	* `CONSOLIDATED_DH_TITLE` - thread title for doubleheader when `CONSOLIDATE_DH` is `true`. see `TITLE` for more info about available parameters, and it's probably best not to include game time in this (Default: "PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}")
+	* `TIME` - time to post the pregame thread in bot's local time zone ("8AM")
 	* `SUPPRESS_MINUTES` - pregame thread will be suppressed if game thread will be posted within this number of minutes. A value of 0 will suppress the pregame thread only if it is already time to post the game thread. Set to -1 to disable suppression based on game thread post time. (-1, 0, 60, 120, etc. default: 0)
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Pregame Thread")
 	* `CONSOLIDATE_DH` - do you want to consolidate pre game threads for doubleheaders? (true/false)
-	* `CONTENT` (`BLURB`, `BROADCAST`, `PROBABLES`, `FIRST_PITCH`, `DESCRIPTION`) - what to include in the body of the post (true/false)
+	* `CONTENT`
+		* `HEADER` - include game info header in the post (true/false - strongly suggested: true)
+		* `BLURB` - include game headline and blurb about the game (true/false)
+		* `PROBABLES` - include probably pitchers in the post, along with reports (true/false)
+		* `FOOTER` - text to include at the end of the post (e.g. "Let's go Phillies!" default: "")
+	* `TWITTER` - settings for tweeting pregame thread link
+		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "Game day! {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name}")
+		* `CONSOLIDATED_DH_TEXT` - what do you want your tweet to say for doubleheaders when `CONSOLIDATE_DH` is `true`? see `TEXT` for more info. (default: "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader}")
 
 * `GAME_THREAD` - game thread settings
-	* `TAG` - prefix for the thread title ("GAME THREAD:")
+	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `HOURS_BEFORE` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
@@ -81,34 +101,42 @@ The following settings can be configured in `/src/settings.json`:
 	* `HOLD_DH_GAME2_THREAD` - do you want to hold the game thread for doubleheader game 2 until game 1 is final? (true/false)
 	* `EXTRA_SLEEP` - do you want the bot to sleep longer than 5 seconds between game thread edits? set this to the number of seconds (e.g. 25 for a total sleep of 30 seconds; default: 0)
 	* `CONTENT` - what to include in the body of the post
-		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS`, `CURRENT_STATE`, `UPDATE_STAMP` - sections to include in the post (true/false)
+		* `HEADER`, `BOX_SCORE`, EXTENDED_BOX_SCORE, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS`, `CURRENT_STATE`, `UPDATE_STAMP` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("Remember to \*\*sort by new\*\* to keep up!")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
 		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
 		* `NEXT_GAME` - include next game date/time/opponent in the game thread after the game is final (true/false)
+	* `TWITTER` - settings for tweeting game thread link
+		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name}{dh: #doubleheader}")
 
 * `POST_THREAD` - postgame thread settings
 	* `ENABLED` - do you want a post game thread? (true/false)
-	* `WIN_TAG` - prefix for the thread title when game result is win ("OUR TEAM WON:")
-	* `LOSS_TAG` - prefix for the thread title when game result is loss ("OUR TEAM LOST:")
-	* `OTHER_TAG` - prefix for the thread title when game result is tie/postponed/suspended/canceled ("POST GAME THREAD:")
+	* `WIN_TITLE` - thread title when game result is win. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `LOSS_TITLE` - thread title when game result is loss. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `OTHER_TITLE` - thread title when game result is tie/postponed/suspended/canceled. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Postgame Thread")
 	* `CONTENT` - what to include in the body of the post
-		* `HEADER`, `BOX_SCORE`, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
+		* `HEADER`, `BOX_SCORE`, EXTENDED_BOX_SCORE, `LINE_SCORE`, `SCORING_PLAYS`, `HIGHLIGHTS` - sections to include in the post (true/false)
 		* `FOOTER` - text to include at the end of the post ("Remember to \*\*sort by new\*\* to keep up!")
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `NEXT_GAME` - include next game date/time/opponent in the postgame thread (true/false)
+	* `TWITTER` - settings for tweeting postgame thread link
+		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
+		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }{myTeam:name} win! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
+		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
+		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
 
 ---
 
-If something doesn't seem right, feel free to message me on reddit or post it as a bug on github.
+If you have any issues or questions, feel free to message me on reddit (/u/toddrob) or post it as a bug on github.
 
 This was written in Python 2.7, so beware if you are running Python 3 or
 	above that it may not work correctly. Also make sure you install
-	praw and simplejson before running!
+	praw, simplejson, pytz, and localtz before running! If you enable Twitter settings, you also need to install python-twitter!
 
 Modules being used:
 
@@ -116,9 +144,47 @@ Modules being used:
 	simplejson - JSON parsing
 	urllib2 - pulling data from MLB servers
 	ElementTree - XML parsing
+	pytz - timezone conversion
+	localtz - to determine bot's local timezone
+	python-twitter (optional) - interfacing Twitter
 
 ---
 ### Change Log
+
+#### v5.1.0
+* Updated to use new MLB Stats API
+* Added flexible thread title support (using **new `TITLE` setting** in each thread section of `settings.json`, `TAG` setting is deprecated). Info about available parameters and examples are listed in `README.md` under the `PRE_THREAD` : `TITLE` setting
+* Added Twitter support. Configure Twitter OAuth settings by copying the new `TWITTER` section in `sample_settings.json`, and enable/configure for each thread by copying the `TWITTER` section from each of the `*_THREAD` sections in `sample_settings.json`
+* Added `api_download()` function to modularize downloading of data from MLB Stats API, including a cache of api data in the new Games class (flushed daily), to honor wait time included in live game feed metadata and reduce the number of times the live game feed has to be downloaded for each game thread update. Since wait time in API data does not work correctly, also added a 4 second local wait time so the data only has to be downloaded once per game thread update.
+* Added `get_schedule()` function to modularize the lookup of a given day's game schedule (filtered by team, game, or all games)
+* Created `games.py` module with a Games class, which simply holds the `games` dict. I had to make it a separate module in order to make the games dict accessible from all modules
+* Created a variable in the editor to hold info about all teams, rather than downloading the data for each use of `lookup_team_info()`
+* Added support for `sport_code` other than `mlb` in `lookup_team_info()`. This is necessary for exhibition games against college teams (`sport_code` = `bbc`)
+* Added `lookup_player_info()` to pull player info from Stats API. Sets local cache wait time to 8 hours since this data shouldn't change during the game
+* Deprecated several functions since the same data is available in the Games class: `get_homeaway()`, `generate_pre_first_pitch()`, `generate_pre_description()`
+* Deprecated `generate_pre_code()` and `generate_code()` (combined into `generate_thread_code()`)
+* Deprecated `download_pre_files()` (replaced with `api_download()`) -- `download_files()` is mostly deprecated, but still used for pitcher reports in `generate_probables()` until I can find a Stats API source for that data. Updated `download_files()` to support different file sets, since it will only be used to download gamecenter.xml
+* Deprecated `generate_broadcast_info()` and the `PRE_THREAD` : `CONTENT` : `BROADCAST`, `FIRST_PITCH`, and `DESCRIPTION` settings; added `HEADER` and `FOOTER` settings to the same section. Replaced these pre-thread-specific elements with the same header as the game/post threads, excluding Weather and Strikezone Map links. **Be sure to update your `settings.json` file with these changes (and `TAG`->`TITLE` for each thread)**
+* Deprecated `decision` class from `player` module, since decision data is straightforward in Stats API
+* Deprecated `get_subreddits()`, `get_notes()`, and `get_team()` in favor of `lookup_team_info()`
+* Deprecated `SERIES_IN_TITLES` setting; use `{series}` parameter instead, see `PRE_THREAD` : `TITLE` description above for details
+* Updated notes links in thread headers from "Home"/"Away" to team names, and added team names in the TV and Radio sections
+* Added innings pitched to probable pitcher section
+* Added OBP and SLG to box score
+* Added `EXTENDED_BOX_SCORE` setting in `CONTENT` settings section for both `GAME_THREAD` and `POST_THREAD`. This will display the extended box score data (triples, homeruns, total bases, GIDP, etc.) Default false for game and true for postgame.
+* Added LOB (runners left on base) to linescore
+* Added separate SD and HD links to highlights list (previous version had SD only)
+* Added check for postponed/cancelled/suspended status while waiting for time to post game thread. If game is postponed/canceled prior to the game thread being posted and postgame thread is enabled, the bot will now skip the game thread and post the postgame thread immediately
+* Moved `skipflag` into `games` dict rather than leaving it as a standalone var--used it to skip posting of game thread for canceled/postponed game
+* Updated logic for counting active/pending/delayed/final games--the previous logic was flawed when postgame thread is disabled
+* Bot will now sticky (if enabled) pre-existing threads on startup, and then unsticky as usual when the next thread is posted
+* Added automatic timezone support based on bot's local timezone and team's timezone; added `convert_tz()` function to editor module and removed `BOT_TIME_ZONE` and `TEAM_TIME_ZONE` settings. This requires two new modules, pytz (for timezone conversion) and tzlocal (to determine bot's local timezone). use pip install <module name> or easy_install <module name> to install them
+* Added `get_gameDate()` function to look up UTC date/time stamp for a game based on gamePk
+* Added `PRE_THREAD` : `CONSOLIDATED_DH_TITLE` setting to be used for consolidated pregame threads when `CONSOLIDATE_DH` is enabled
+* Updated default date format in thread titles to `%a %b %d @ %I:%M%p %Z` (e.g. `Sat Apr 28 @ 06:05PM EDT`) for thread titles (`%a %b %d` for consolidated doubleheader pregame threads, e.g. `Sat Apr 28`)
+* Added global var to `lookup_team_code.py` to hold team info, rather than downloading it multiple times for each lookup
+* Added `replace_params()` to modularize the replacement of parameters for titles and tweets (and more later)
+* Logging improvements
 
 #### v5.0.4
 * Suppressed series and game number from next game at the end of game/post threads for regular season games

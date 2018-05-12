@@ -6,25 +6,27 @@
     "USER_AGENT": "",
     "SUBREDDIT": "XXX",
     "TEAM_CODE": "XXX",
-    "BOT_TIME_ZONE": "ET",
-    "TEAM_TIME_ZONE": "ET",
     "STICKY": true,
     "FLAIR_MODE": "none",
-    "SERIES_IN_TITLES": true,
     "LOG_LEVEL": 2,
     "OFF_THREAD": {
         "ENABLED": true,
-        "TAG": "OFF DAY THREAD:",
+        "TITLE": "OFF DAY THREAD: {date:%A, %B %d}",
         "TIME": "9AM",
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
         "FLAIR": "",
         "SUPPRESS_OFFSEASON": true,
-        "FOOTER": "No game today. Feel free to discuss whatever you want in this thread."
+        "FOOTER": "No game today. Feel free to discuss whatever you want in this thread.",
+        "TWITTER": {
+            "ENABLED": false,
+            "TEXT": "The {myTeam:name} are off today. Come pass the time in our off day thread: {link} #{myTeam:name}"
+        }
     },
     "PRE_THREAD": {
         "ENABLED": true,
-        "TAG": "PREGAME THREAD:",
+        "TITLE": "PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
+        "CONSOLIDATED_DH_TITLE": "PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}",
         "TIME": "9AM",
         "SUPPRESS_MINUTES": 0,
         "SUGGESTED_SORT": "new",
@@ -32,15 +34,19 @@
         "FLAIR": "",
         "CONSOLIDATE_DH": true,
         "CONTENT": {
+            "HEADER": true,
             "BLURB": true,
-            "BROADCAST": true,
             "PROBABLES": true,
-            "FIRST_PITCH": true,
-            "DESCRIPTION": true
+            "FOOTER": ""
+        },
+        "TWITTER": {
+            "ENABLED": false,
+            "TEXT": "Game day!{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader game %N}",
+            "CONSOLIDATED_DH_TEXT": "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader}"
         }
     },
     "GAME_THREAD": {
-        "TAG": "GAME THREAD:",
+        "TITLE": "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
         "HOURS_BEFORE": 3,
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
@@ -51,6 +57,7 @@
         "CONTENT": {
             "HEADER": true,
             "BOX_SCORE": true,
+            "EXTENDED_BOX_SCORE": false,
             "LINE_SCORE": true,
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
@@ -61,25 +68,42 @@
             "PREVIEW_BLURB": true,
             "PREVIEW_PROBABLES": true,
             "NEXT_GAME": true
+        },
+        "TWITTER": {
+            "ENABLED": false,
+            "TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name}{dh: #doubleheader}"
         }
     },
     "POST_THREAD": {
         "ENABLED": true,
-        "WIN_TAG": "OUR TEAM WON:",
-        "LOSS_TAG": "OUR TEAM LOST:",
-        "OTHER_TAG": "POST GAME THREAD:",
+        "WIN_TITLE": "WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
+        "LOSS_TITLE": "LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
+        "OTHER_TITLE": "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
         "FLAIR": "",
         "CONTENT": {
             "HEADER": true,
             "BOX_SCORE": true,
+            "EXTENDED_BOX_SCORE": true,
             "LINE_SCORE": true,
             "SCORING_PLAYS": true,
             "HIGHLIGHTS": true,
             "FOOTER": "",
             "THEATER_LINK": true,
             "NEXT_GAME": true
+        },
+        "TWITTER": {
+            "ENABLED": false,
+            "WIN_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{myTeam:name} win! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}",
+            "LOSS_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}",
+            "OTHER_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}"
         }
+    },
+    "TWITTER": {
+        "CONSUMER_KEY": "XXX",
+        "CONSUMER_SECRET": "XXX",
+        "ACCESS_TOKEN": "XXX",
+        "ACCESS_SECRET": "XXX"
     }
 }

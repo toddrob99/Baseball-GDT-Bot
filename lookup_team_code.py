@@ -1,17 +1,22 @@
 import urllib2
 import simplejson as json
+
+teaminfo = {}
+
 def lookup_team_info(field="name_abbrev", lookupfield="team_code", lookupval=None):
-    try:
-        response = urllib2.urlopen("http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27")
-        teaminfo = json.load(response)
-    except Exception as e:
-        print e
-        return None
+    global teaminfo
+    if len(teaminfo) == 0:
+        try:
+            response = urllib2.urlopen("http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27")
+            teaminfo = json.load(response)
+        except Exception as e:
+            print "Error downloading team info:",e
+            return None
 
     teamlist = teaminfo.get('team_all').get('queryResults').get('row')
     teams = []
     for team in teamlist:
-        if team.get(lookupfield,None).lower() == lookupval.lower(): teams.append(team)
+        if team.get(lookupfield,"").lower() == lookupval.lower(): teams.append(team)
     return teams
 
 print "########"

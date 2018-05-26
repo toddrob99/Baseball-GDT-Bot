@@ -33,7 +33,7 @@ sys.setdefaultencoding('utf8')
 class Bot:
 
     def __init__(self):
-        self.VERSION = '5.1.0'
+        self.VERSION = '5.1.1'
         self.SETTINGS = {}
         self.games = games.Games().games
         self.gamesLive = games.Games().gamesLive
@@ -307,20 +307,20 @@ class Bot:
                 self.SETTINGS['GAME_THREAD']['TWITTER'].update({'TEXT' : ""})
 
             if self.SETTINGS.get('POST_THREAD') == None:
-                warnings.append('Missing POST_THREAD, using defaults (WIN_TITLE: "WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", LOSS_TITLE: "LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", OTHER_TITLE: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true, NEXT_GAME: true, TWITTER:ENABLED: false, TWITTER:WIN_TEXT: "", TWITTER:LOSS_TEXT: "", TWITTER:OTHER_TEXT: "")...')
-                self.SETTINGS.update({'POST_THREAD' : {'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'OTHER_TITLE' : 'POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True, 'NEXT_GAME' : True}, 'TWITTER' : {'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""}}})
+                warnings.append('Missing POST_THREAD, using defaults (WIN_TITLE: "WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", LOSS_TITLE: "LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", OTHER_TITLE: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true, NEXT_GAME: true, TWITTER:ENABLED: false, TWITTER:WIN_TEXT: "", TWITTER:LOSS_TEXT: "", TWITTER:OTHER_TEXT: "")...')
+                self.SETTINGS.update({'POST_THREAD' : {'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'OTHER_TITLE' : 'POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True, 'NEXT_GAME' : True}, 'TWITTER' : {'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""}}})
 
             if self.SETTINGS.get('POST_THREAD').get('ENABLED') == None:
                 warnings.append('Missing POST_THREAD : ENABLED, using default (true)...')
                 self.SETTINGS['POST_THREAD'].update({'ENABLED' : True})
 
             if self.SETTINGS.get('POST_THREAD').get('WIN_TITLE') == None:
-                warnings.append('Missing POST_THREAD : WIN_TITLE, using default ("WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['POST_THREAD'].update({'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
+                warnings.append('Missing POST_THREAD : WIN_TITLE, using default ("WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
+                self.SETTINGS['POST_THREAD'].update({'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
 
             if self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE') == None:
-                warnings.append('Missing POST_THREAD : LOSS_TITLE, using default ("LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['POST_THREAD'].update({'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
+                warnings.append('Missing POST_THREAD : LOSS_TITLE, using default ("LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
+                self.SETTINGS['POST_THREAD'].update({'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
 
             if self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE') == None:
                 warnings.append('Missing POST_THREAD : OTHER_TITLE, using default ("POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
@@ -1040,7 +1040,7 @@ class Bot:
                                 if self.SETTINGS.get('POST_THREAD').get('ENABLED'):
                                     try:
                                         myteamwon = edit.didmyteamwin(k)
-                                        game.update({'posttitle' : edit.generate_title(k,"post",myteamwon)})
+                                        game.update({'posttitle' : edit.generate_title(k,"post",False,myteamwon)})
                                         subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
                                         if self.SETTINGS.get('STICKY'):
                                             if game.get('presub'):

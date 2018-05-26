@@ -87,8 +87,10 @@ class Editor:
 
     def replace_params(self,original,thread,type,k=None,timemachine=False,myteamwon=""):
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Replacing parameters in",thread,type + "..."
-        replaced = original.replace('\{','PLACEHOLDEROPEN').replace('\}','PLACEHOLDERCLOSE')
+        replaced = original.replace('\{','PLACEHOLDEROPEN').replace('\}','PLACEHOLDERCLOSE').replace('\:','PLACEHOLDERCOLON').replace('\%','PLACEHOLDERMOD')
         while replaced.find('{') != -1:
+            modifier = None
+            replaceVal = ""
             if replaced.find('}') < replaced.find('{'):
                 if replaced.find('}') == -1:
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Extra { or missing } detected in",thread,type,"at character",str(replaced.find('{')),"- escaping the {..."
@@ -98,6 +100,12 @@ class Editor:
                     replaced = replaced[0:replaced.find('}')] + 'PLACEHOLDERCLOSE' + replaced[replaced.find('}')+1:]
                 continue
             paramParts = [replaced.find('{'), replaced.find('}'), replaced[replaced.find('{')+1:replaced.find('}')], replaced[replaced.find('{'):replaced.find('}')+1]]
+            if paramParts[2].find('%') != -1 and not paramParts[2].startswith('date') \
+                and not paramParts[2].startswith('dh') and not paramParts[2].startswith('series') \
+                and not paramParts[2].startswith('link'):
+            #modifier detected - can't modify params that take custom format with variables
+                modifier = paramParts[2][paramParts[2].find('%')+1:] #extract modifier, remove from param parts, then apply the modifier later
+                paramParts[2] = paramParts[2].replace('%'+modifier,'')
             if paramParts[2].find('{') != -1:
                 if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Extra { detected in",thread,type,"at character",str(replaced.find('{')),"- escaping it..."
                 replaced = replaced[0:replaced.find('{')] + 'PLACEHOLDEROPEN' + replaced[replaced.find('{')+1:]
@@ -113,125 +121,162 @@ class Editor:
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Found param parts:",paramParts
                 if paramParts[4] == 'date':
                     if thread == 'off':
-                        replaced = replaced.replace(paramParts[3],datetime.now().strftime(paramParts[5]))
+                        replaceVal = datetime.now().strftime(paramParts[5])
                     else:
-                        replaced = replaced.replace(paramParts[3],self.games[k].get('gameInfo').get('date_object').strftime(paramParts[5]))
+                        replaceVal = self.games[k].get('gameInfo').get('date_object').strftime(paramParts[5])
                 elif paramParts[4] == 'myTeam':
                     if paramParts[5] == 'wins':
                         if thread == 'off': #TODO: wins currently not supported for off thread, because this value comes from the game data
                             if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:wins' parameter is currently not supported for off day thread",type+", using 0..."
-                            replaced = replaced.replace(paramParts[3], "0")
+                            replaceVal =  "0"
                         else:
                             if timemachine and myteamwon=="1":
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))-1))
+                                replaceVal = str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win')))
+                                replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))
                     elif paramParts[5] == 'losses':
                         if thread == 'off': #TODO: losses currently not supported for off thread, because this value comes from the game data
                             if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:losses' parameter is currently not supported for off day thread",type+", using 0..."
-                            replaced = replaced.replace(paramParts[3], "0")
+                            replaceVal =  "0"
                         else:
                             if timemachine and myteamwon=="0":
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))-1))
+                                replaceVal = str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss')))
+                                replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))
+                    elif paramParts[5] == 'runs':
+                        if thread != 'post': #runs only supported for post thread/tweet
+                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:runs' parameter is only supported for postgame thread, using 0..."
+                            replaceVal =  "0"
+                        else:
+                            replaceVal =  str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('runs'))
                     else:
-                        replaced = replaced.replace(paramParts[3], self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE'))) #don't need to pass sportCode in this call, since myTeam must be MLB
+                        replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
                     if thread == 'off':
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'oppTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal = ''
                     else:
                         if self.games[k].get('homeaway') == 'home': opp = 'away'
                         else: opp = 'home'
                         if paramParts[5] == 'wins':
                             if timemachine and myteamwon=="0":
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get(opp).get('win'))-1))
+                                replaceVal = str(int(self.games[k].get('gameInfo').get(opp).get('win'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get(opp).get('win')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('win'))
                         elif paramParts[5] == 'losses':
                             if timemachine and myteamwon=="1":
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get(opp).get('loss'))-1))
+                                replaceVal =  str(int(self.games[k].get('gameInfo').get(opp).get('loss'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get(opp).get('loss')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('loss'))
+                        elif paramParts[5] == 'runs':
+                            if thread != 'post': #runs only supported for post thread/tweet
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'oppTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                replaceVal =  "0"
+                            else:
+                                replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('runs'))
                         else:
-                            replaced = replaced.replace(paramParts[3], self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code')))
+                            replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
                     if thread == 'off':
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'awayTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
                             if timemachine and ((myteamwon=="1" and self.games[k].get('homeaway')=='away') or (myteamwon=="0" and self.games[k].get('homeaway')=='home')):
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get('away').get('win'))-1))
+                                replaceVal =  str(int(self.games[k].get('gameInfo').get('away').get('win'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get('away').get('win')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get('away').get('win'))
                         elif paramParts[5] == 'losses':
                             if timemachine and ((myteamwon=="0" and self.games[k].get('homeaway')=='away') or (myteamwon=="1" and self.games[k].get('homeaway')=='home')):
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get('away').get('loss'))-1))
+                                replaceVal =  str(int(self.games[k].get('gameInfo').get('away').get('loss'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get('away').get('loss')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get('away').get('loss'))
+                        elif paramParts[5] == 'runs':
+                            if thread != 'post': #runs only supported for post thread/tweet
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'awayTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                replaceVal =  "0"
+                            else:
+                                replaceVal =  str(self.games[k].get('gameInfo').get('away').get('runs'))
                         else:
-                            replaced = replaced.replace(paramParts[3], self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code')))
+                            replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
                     if thread == 'off':
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'homeTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
                             if timemachine and ((myteamwon=="1" and self.games[k].get('homeaway')=='home') or (myteamwon=="0" and self.games[k].get('homeaway')=='away')):
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get('home').get('win'))-1))
+                                replaceVal =  str(int(self.games[k].get('gameInfo').get('home').get('win'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get('home').get('win')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get('home').get('win'))
                         elif paramParts[5] == 'losses':
                             if timemachine and ((myteamwon=="0" and self.games[k].get('homeaway')=='home') or (myteamwon=="1" and self.games[k].get('homeaway')=='away')):
-                                replaced = replaced.replace(paramParts[3], str(int(self.games[k].get('gameInfo').get('home').get('loss'))-1))
+                                replaceVal =  str(int(self.games[k].get('gameInfo').get('home').get('loss'))-1)
                             else:
-                                replaced = replaced.replace(paramParts[3], str(self.games[k].get('gameInfo').get('home').get('loss')))
+                                replaceVal =  str(self.games[k].get('gameInfo').get('home').get('loss'))
+                        elif paramParts[5] == 'runs':
+                            if thread != 'post': #runs only supported for post thread/tweet
+                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'homeTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                replaceVal =  "0"
+                            else:
+                                replaceVal =  str(self.games[k].get('gameInfo').get('home').get('runs'))
                         else:
-                            replaced = replaced.replace(paramParts[3], self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code')))
+                            replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
                     if thread == 'off':
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'series' parameter is not supported for off day thread",type+", removing..."
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal =  ''
                     else:
                         if self.games[k].get('gameType') in ['I', 'E', 'S','R']:
                             if self.SETTINGS.get('LOG_LEVEL')>2: print "{series} parameter only applies to post season games, removing..."
-                            replaced = replaced.replace(paramParts[3], '')
+                            replaceVal =  ''
                         else:
                             series = paramParts[5].replace('%D',self.games[k].get('seriesDescription')).replace('%N',str(self.games[k].get('seriesGameNumber')))
-                            replaced = replaced.replace(paramParts[3],series)
+                            replaceVal = series
                 elif paramParts[4] == 'dh':
                     if thread == 'off':
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'dh' parameter is not supported for off day thread",type+", removing..."
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal =  ''
                     else:
                         if self.games[k].get('doubleHeader') == 'N':
                             if self.SETTINGS.get('LOG_LEVEL')>2: print "{dh} parameter only applies to doubleheader games, removing..."
-                            replaced = replaced.replace(paramParts[3], '')
+                            replaceVal =  ''
                         else:
                             dh = paramParts[5].replace('%N',str(self.games[k].get('gameNumber')))
-                            replaced = replaced.replace(paramParts[3],dh)
+                            replaceVal = dh
                 else: #there are no other supported parameters with multiple parts at this time
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unsupported parameter",paramParts[3],"found in",thread,type+", removing..."
-                    replaced = replaced.replace(paramParts[3], '')
+                    replaceVal =  ''
             else: #params that don't have multiple parts
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Found title param parts:",paramParts
                 if paramParts[2] == 'vsat': 
                     if thread == "off": 
-                        replaced = replaced.replace(paramParts[3], '')
+                        replaceVal =  ''
                         if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: {vsat} parameter is not supported for off day thread",type+", removing..."
                     else:
                         if self.games[k].get('homeaway') == 'home': vsat = "vs"
                         else: vsat = '@'
-                        replaced = replaced.replace(paramParts[3], vsat)
+                        replaceVal =  vsat
                 elif paramParts[2] == 'date': #use default date format
-                    replaced = replaced.replace(paramParts[3],self.games[k].get('gameInfo').get('date_object').strftime("%B %d, %Y"))
+                    replaceVal = self.games[k].get('gameInfo').get('date_object').strftime("%B %d, %Y")
                 elif paramParts[2] == 'gameNum':
-                    replaced = replaced.replace(paramParts[3],str(self.games[k].get('gameNumber')))
+                    replaceVal = str(self.games[k].get('gameNumber'))
                 else: #there are no other supported parameters without multiple parts at this time
                     if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unsupported parameter",paramParts[3],"found in",thread,type+", ignoring..."
-        replaced = replaced.replace('PLACEHOLDEROPEN','{').replace('PLACEHOLDERCLOSE','}')
+            #apply modifier and replace
+            if modifier:
+                if modifier.find('%') != -1: #multiple modifiers detected
+                    modifiers = modifier.split('%')
+                else: modifiers = [modifier]
+                for mod in modifiers:
+                    if mod=='lower':
+                        replaceVal = replaceVal.lower()
+                    elif mod=='upper':
+                        replaceVal = replaceVal.upper()
+                    elif mod=='stripspaces':
+                        replaceVal = replaceVal.replace(' ','')
+            replaced = replaced.replace(paramParts[3],replaceVal) #replace the param with the replacement value
+        replaced = replaced.replace('PLACEHOLDEROPEN','{').replace('PLACEHOLDERCLOSE','}').replace('PLACEHOLDERCOLON',':').replace('PLACEHOLDERMOD','%')
         return replaced
 
     def generate_title(self,k,thread,timemachine=False,myteamwon=""):
@@ -362,10 +407,10 @@ class Editor:
             home_pitcher = "[" + home_pitcher + "](" + "http://mlb.mlb.com/team/player.jsp?player_id=" + str(homePitcherData.get('person').get('id')) + ")"
             home_pitcher += " (" + str(homePitcherData.get('seasonStats',{}).get('pitching',{}).get('wins',0)) + "-" + str(homePitcherData.get('seasonStats',{}).get('pitching',{}).get('losses',0)) + ", " + homePitcherData.get('seasonStats',{}).get('pitching',{}).get('era','0.00') + " ERA, " +  str(homePitcherData.get('seasonStats',{}).get('pitching',{}).get('inningsPitched','0')) + " IP)"
 
-        probables  = " |Pitcher|Report\n"
-        probables += "-|-|-\n"
-        probables += awaySubLink + "|" + away_pitcher + "|" + awayReport + "\n"
-        probables += homeSubLink + "|" + home_pitcher + "|" + homeReport + "\n"
+        probables  = "||Probable Pitcher|Report|\n"
+        probables += "|:--|:--|:--|\n"
+        probables += "|" + awaySubLink + "|" + away_pitcher + "|" + awayReport + "|\n"
+        probables += "|" + homeSubLink + "|" + home_pitcher + "|" + homeReport + "|\n"
         probables += "\n"
 
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning probables..."
@@ -557,11 +602,11 @@ class Editor:
             awayBatters.append(player.batter())
 
         if len(homeBatters) > 0:
-            boxscore += self.games[gameid].get('gameInfo').get('away').get('team_name') + "|Pos|AB|R|H|RBI|BB|SO|BA/OBP/SLG"
-            boxscore += "|" + self.games[gameid].get('gameInfo').get('home').get('team_name') + "|Pos|AB|R|H|RBI|BB|SO|BA/OBP/SLG"
-            boxscore += "\n:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--\n"
+            boxscore += "|" + self.games[gameid].get('gameInfo').get('away').get('team_name') + "|Pos|AB|R|H|RBI|BB|SO|BA/OBP/SLG"
+            boxscore += "|" + self.games[gameid].get('gameInfo').get('home').get('team_name') + "|Pos|AB|R|H|RBI|BB|SO|BA/OBP/SLG|"
+            boxscore += "\n|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|\n"
             for i in range(0, len(homeBatters)):
-                boxscore += str(awayBatters[i]) + "|" + str(homeBatters[i]) + "\n"
+                boxscore += "|" + str(awayBatters[i]) + "|" + str(homeBatters[i]) + "|\n"
 
         if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') or (self.SETTINGS.get('POST_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') and self.games[gameid].get('final')):
             awayBattingBox = ""
@@ -585,9 +630,9 @@ class Editor:
                     for x in homeBattingFields:
                         homeBattingBox += '**' + x.get('label') + '**: ' + x.get('value') + ' '
             if awayBattingBox != homeBattingBox:
-                boxscore += "\n\n|"+self.games[gameid].get('gameInfo').get('away').get('team_name')+"|"+self.games[gameid].get('gameInfo').get('home').get('team_name')+"\n"
-                boxscore += "|:--|:--\n"
-                boxscore += "|" + awayBattingBox + "|" + homeBattingBox + "\n"
+                boxscore += "\n\n|"+self.games[gameid].get('gameInfo').get('away').get('team_name')+"|"+self.games[gameid].get('gameInfo').get('home').get('team_name')+"|\n"
+                boxscore += "|:--|:--|\n"
+                boxscore += "|" + awayBattingBox + "|" + homeBattingBox + "|\n"
 
         awayPitchers = []
         awayPitcherIds = gameBoxscore.get('teams').get('away').get('pitchers')
@@ -630,11 +675,11 @@ class Editor:
 
         if len(homePitchers) > 0:
             boxscore += "\n\n"
-            boxscore += self.games[gameid].get('gameInfo').get('away').get('team_name') + "|IP|H|R|ER|BB|SO|P-S|ERA|"
-            boxscore += self.games[gameid].get('gameInfo').get('home').get('team_name') + "|IP|H|R|ER|BB|SO|P-S|ERA\n"
-            boxscore += ":--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--\n"
+            boxscore += "|" + self.games[gameid].get('gameInfo').get('away').get('team_name') + "|IP|H|R|ER|BB|SO|P-S|ERA|"
+            boxscore += self.games[gameid].get('gameInfo').get('home').get('team_name') + "|IP|H|R|ER|BB|SO|P-S|ERA|\n"
+            boxscore += "|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|:--|\n"
             for i in range(0, len(homePitchers)):
-                boxscore += str(awayPitchers[i]) + "|" + str(homePitchers[i]) + "\n"
+                boxscore += "|" + str(awayPitchers[i]) + "|" + str(homePitchers[i]) + "|\n"
 
         if boxscore == "":
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning boxscore (none)..."
@@ -740,7 +785,7 @@ class Editor:
         for play in plays:
             thisInn = "Bottom " + play.get('about').get('inning') if play.get('about').get('halfInning')=='bottom' else "Top " + play.get('about').get('inning')
             if thisInn != prevInn: scoringplays += thisInn + "|"
-            else: scoringplays += " |"
+            else: scoringplays += "| |"
             prevInn = thisInn
             scoringplays += play.get('result').get('description') + "|"
             homeScore = play.get('result').get('homeScore',0)
@@ -760,8 +805,8 @@ class Editor:
         highlights = ""
         gameContent = self.api_download(self.games[gameid].get('content').get('link'),False,5)
         gameItems = (v for v in gameContent.get('highlights',{}).get('live',{}).get('items',{}) if v.get('type')=='video')
-        highlights += "Team|Highlight|Links\n"
-        highlights += ":--|:--|:--\n"
+        highlights += "|Team|Highlight|Links|\n"
+        highlights += "|:--|:--|:--|\n"
         unorderedHighlights = {}
         for x in gameItems:
             unorderedHighlights.update({x.get('id') : x})
@@ -781,11 +826,11 @@ class Editor:
             hdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='FLASH_2500K_1280X720'),None)
             if not hdLink: hdLink = ""
             else: hdLink = "[HD]("+hdLink+")"
-            highlights += subLink + "|" + x.get('headline') + " (" + x.get('duration') + ")|" + sdLink + " " + hdLink + "\n"
+            highlights += "|" + subLink + "|" + x.get('headline') + " (" + x.get('duration') + ")|" + sdLink + " " + hdLink + "|\n"
         if theater_link:
             gamedate = self.games[gameid].get('gameInfo').get('date_object').strftime('%Y%m%d')
             game_pk = self.games[gameid].get('gamePk')
-            highlights += " |See all highlights at [Baseball.Theater](http://baseball.theater/game/" + gamedate + "/" + str(game_pk) + ")| \n"
+            highlights += "||See all highlights at [Baseball.Theater](http://baseball.theater/game/" + gamedate + "/" + str(game_pk) + ")||\n"
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning highlights..."
         return highlights
 
@@ -898,27 +943,27 @@ class Editor:
         losingPitcher = gameLive.get('liveData').get('boxscore').get('teams').get(loser).get('players').get('ID'+str(gameLive.get('liveData').get('linescore').get('pitchers').get('loss')))
         savePitcher = None
         savePitcher = gameLive.get('liveData').get('boxscore').get('teams').get(winner).get('players').get('ID'+str(gameLive.get('liveData').get('linescore').get('pitchers').get('save')))
-        decisions += "Decisions||" + "\n"
-        decisions += ":--|:--" + "\n"
-        decisions += awaySubLink + "|"
+        decisions += "|Decisions||" + "\n"
+        decisions += "|:--|:--|" + "\n"
+        decisions += "|" + awaySubLink + "|"
         if winner=='away':
             if winningPitcher: decisions += "[" + winningPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('id')) + ") " + winningPitcher.get('gameStats').get('pitching').get('note')
             else: decisions += "Winning pitcher data not available"
-            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "\n"
-            else: decisions += "\n"
+            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            else: decisions += "|\n"
         else:
-            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "\n"
-            else: decisions += "Losing pitcher data not available\n"
+            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            else: decisions += "Losing pitcher data not available|\n"
 
-        decisions += homeSubLink + "|"
+        decisions += "|" + homeSubLink + "|"
         if winner=='home':
             if winningPitcher: decisions += "[" + winningPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('id')) + ") " + winningPitcher.get('gameStats').get('pitching').get('note')
             else: decisions += "Winning pitcher data not available"
-            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "\n"
-            else: decisions += "\n"
+            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            else: decisions += "|\n"
         else:
-            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "\n"
-            else: decisions += "Losing pitcher data not available\n"
+            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            else: decisions += "Losing pitcher data not available|\n"
 
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning decisions..."
         return decisions
@@ -950,6 +995,7 @@ class Editor:
         gamelive = self.api_download(self.games[k].get('link'))
         detailedState = self.games[k].get('status').get('detailedState')
         abstractGameState = self.games[k].get('status').get('abstractGameState')
+        reason = self.games[k].get('status').get('reason')
         if self.SETTINGS.get('LOG_LEVEL')>2: print "Status:",abstractGameState,"/",detailedState
         homeRuns = gamelive.get('liveData').get('linescore').get('home',{}).get('runs',0)
         awayRuns = gamelive.get('liveData').get('linescore').get('away',{}).get('runs',0)
@@ -974,7 +1020,13 @@ class Editor:
                 if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Final/Tie)..."
                 return status
         elif detailedState.startswith("Postponed") or detailedState.startswith("Suspended") or detailedState.startswith("Cancelled"):
-            status += "##Game Status: " + detailedState + "\n\n"
+            if reason:
+                if detailedState.find(reason) != -1:
+                    status += "##Game Status: " + detailedState + "\n\n"
+                else:
+                    status += "##Game Status: " + detailedState + " due to " + reason + "\n\n"
+            else:
+                status += "##Game Status: " + detailedState + "\n\n"
             if include_next_game: status += self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
             if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Postponed, Suspended, or Cancelled)..."
             return status
@@ -1070,9 +1122,9 @@ class Editor:
                     elif daygame.get('doubleHeader') in ['Y','S']:
                         #make sure not to return DH game 1 if current game is DH game 2
                         thisgame = self.get_teams_time(pk=thisPk,d=d)
-                        if thisgame.get('doubleHeader') in ['Y','S'] and d==today and thisgame.get('gameNumber') > daygame.get('gameNumber'): continue
+                        gameinfo = self.get_teams_time(pk=daygame.get('gamePk'),d=d)
+                        if thisgame.get('date_object') > gameinfo.get('date_object'): continue
                         else:
-                            gameinfo = self.get_teams_time(pk=daygame.get('gamePk'),d=d)
                             next_game[i] = {'pk': daygame.get('gamePk'), 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : gameinfo.get('home').get('team_code'), 'away_code' : gameinfo.get('away').get('team_code'), 'home_team_name' : gameinfo.get('home').get('team_name'), 'away_team_name' : gameinfo.get('away').get('team_name'), 'event_time' : gameinfo.get('date_object').strftime("%I:%M %p %Z"), 'series' : daygame.get('seriesDescription'), 'series_num' : daygame.get('seriesGameNumber'), 'gameType' : daygame.get('gameType')}
                             i += 1
                     else:

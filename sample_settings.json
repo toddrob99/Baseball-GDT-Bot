@@ -20,7 +20,7 @@
         "FOOTER": "No game today. Feel free to discuss whatever you want in this thread.",
         "TWITTER": {
             "ENABLED": false,
-            "TEXT": "The {myTeam:name} are off today. Come pass the time in our off day thread: {link} #{myTeam:name}"
+            "TEXT": "The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}"
         }
     },
     "PRE_THREAD": {
@@ -41,8 +41,8 @@
         },
         "TWITTER": {
             "ENABLED": false,
-            "TEXT": "Game day!{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader game %N}",
-            "CONSOLIDATED_DH_TEXT": "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader}"
+            "TEXT": "Game day!{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader game %N}",
+            "CONSOLIDATED_DH_TEXT": "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}"
         }
     },
     "GAME_THREAD": {
@@ -71,13 +71,13 @@
         },
         "TWITTER": {
             "ENABLED": false,
-            "TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name}{dh: #doubleheader}"
+            "TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}"
         }
     },
     "POST_THREAD": {
         "ENABLED": true,
-        "WIN_TITLE": "WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
-        "LOSS_TITLE": "LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
+        "WIN_TITLE": "WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
+        "LOSS_TITLE": "LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
         "OTHER_TITLE": "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
@@ -95,9 +95,9 @@
         },
         "TWITTER": {
             "ENABLED": false,
-            "WIN_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{myTeam:name} win! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}",
-            "LOSS_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}",
-            "OTHER_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}"
+            "WIN_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name} {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}",
+            "LOSS_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name} {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}",
+            "OTHER_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}"
         }
     },
     "TWITTER": {

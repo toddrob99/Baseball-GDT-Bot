@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.0
+### Current Version: 5.1.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -58,12 +58,12 @@ The following settings can be configured in `/src/settings.json`:
 	* `FOOTER` - text to include in the body of the post, below the next game info ("No game today. Feel free to discuss whatever you want in this thread.")
 	* `TWITTER` - settings for tweeting off day thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
-		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "The {myTeam:name} are off today. Come pass the time in our off day thread: {link} #{myTeam:name}")
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}")
 
 * `PRE_THREAD` - pregame thread settings
 	* `ENABLED` - do you want a pre game thread? (true/false)
 	* `TITLE` - thread title (Default: "PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
-		* Team-related fields available through `lookup_team_info()` can be used in the below formats (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). In addition to `wins` and `losses`, list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27
+		* Team-related fields available through `lookup_team_info()` can be used in the below formats (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). In addition to `wins`, `losses`, and `runs` (postgame only), list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27
 			* `{myTeam:<field>}` - fields related to team configured in `TEAM_CODE` setting (`myTeam` is the only team parameter available for off day thread)
 			* `{oppTeam:<field>}` - fields related to opponent team
 			* `{homeTeam:<field>}` - fields related to home team
@@ -73,7 +73,12 @@ The following settings can be configured in `/src/settings.json`:
 		* `{gameNum}` which will always be 1 except game 2 of a doubleheader
 		* `{series: %D Game %N -}` - `%D` will be replaced with series description (e.g. `NLDS`, `World Series`), and `%N` will be replaced with series game number (e.g. `1`, `3`). be sure to include a space and/or separator on the beginning and end as needed
 		* `{dh: - DH Game %N}` - will be included in thread title only if game is a doubleheader. `%N` will be replaced with doubleheader game number, same value as `{gameNum}`
-		* Use `\{` or `\}` if you want to include `{` or `}` in your title
+		* Apply a modifier by suffixing `%modifier` to the end of your parameter
+			* `%lower` - lower case, e.g. `{myTeam:name%lower}` -> `phillies`
+			* `%upper` - upper case, e.g. `{myTeam:name%upper}` -> `PHILLIES`
+			* `%stripspaces` - strip all spaces (useful for hashtags), e.g. `{myTeam:name%stripspaces}` -> `WhiteSox`
+			* Multiple modifiers supported, e.g. `{myTeam:name%lower%stripspaces}` -> `whitesox`
+		* Use `\\{`, `\\}`, `\\:`, or `\\%` if you want to include `{`, `}`, `:`, or `%` in your title (the json decoder will fail if you try with only 1 escape character, e.g. `\{`)
 	* `CONSOLIDATED_DH_TITLE` - thread title for doubleheader when `CONSOLIDATE_DH` is `true`. see `TITLE` for more info about available parameters, and it's probably best not to include game time in this (Default: "PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}")
 	* `TIME` - time to post the pregame thread in bot's local time zone ("8AM")
 	* `SUPPRESS_MINUTES` - pregame thread will be suppressed if game thread will be posted within this number of minutes. A value of 0 will suppress the pregame thread only if it is already time to post the game thread. Set to -1 to disable suppression based on game thread post time. (-1, 0, 60, 120, etc. default: 0)
@@ -88,8 +93,8 @@ The following settings can be configured in `/src/settings.json`:
 		* `FOOTER` - text to include at the end of the post (e.g. "Let's go Phillies!" default: "")
 	* `TWITTER` - settings for tweeting pregame thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
-		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "Game day! {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name}")
-		* `CONSOLIDATED_DH_TEXT` - what do you want your tweet to say for doubleheaders when `CONSOLIDATE_DH` is `true`? see `TEXT` for more info. (default: "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name}{dh: #doubleheader}")
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "Game day! {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}")
+		* `CONSOLIDATED_DH_TEXT` - what do you want your tweet to say for doubleheaders when `CONSOLIDATE_DH` is `true`? see `TEXT` for more info. (suggested: "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 
 * `GAME_THREAD` - game thread settings
 	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
@@ -109,12 +114,12 @@ The following settings can be configured in `/src/settings.json`:
 		* `NEXT_GAME` - include next game date/time/opponent in the game thread after the game is final (true/false)
 	* `TWITTER` - settings for tweeting game thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
-		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name}{dh: #doubleheader}")
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 
 * `POST_THREAD` - postgame thread settings
 	* `ENABLED` - do you want a post game thread? (true/false)
-	* `WIN_TITLE` - thread title when game result is win. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "WIN THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
-	* `LOSS_TITLE` - thread title when game result is loss. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "LOSS THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `WIN_TITLE` - thread title when game result is win. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `LOSS_TITLE` - thread title when game result is loss. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `OTHER_TITLE` - thread title when game result is tie/postponed/suspended/canceled. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
@@ -126,9 +131,9 @@ The following settings can be configured in `/src/settings.json`:
 		* `NEXT_GAME` - include next game date/time/opponent in the postgame thread (true/false)
 	* `TWITTER` - settings for tweeting postgame thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
-		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }{myTeam:name} win! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
-		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
-		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (default: "{series:%D Game %N - }{dh:DH Game %N - }Game over! Join the discussion in our postgame thread: {link} #{myTeam:name}{dh: #doubleheader}")
+		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name} {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name} {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 
 ---
 
@@ -150,6 +155,15 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.1
+* Fixed bug in `next_game()` that resulted in doubleheader game 1 being listed as the next game after doubleheader game 2
+* Added reason to game status at the end of game/post threads when game is postponed/cancelled/suspended
+* Added support for `lower`, `upper`, and `stripspaces` modifiers in thread titles and tweet text, see details under `PRE_THREAD` : `TITLE` setting in `README.md`
+* Fixed bug in postgame thread title generation, which resulted in records being incorrect (not updated to reflect the result of the game)
+* Added `runs` parameter to `myTeam`, `oppTeam`, `awayTeam`, and `homeTeam` parameters for title/tweet replacement (e.g. {myTeam:runs}). Supported for postgame threads/tweets only
+* Updated default postgame thread titles and tweet text to be more conversational and include score - see above and `sample_settings.json` for new defaults
+* Fixed some table formatting in new reddit ui
 
 #### v5.1.0
 * Updated to use new MLB Stats API

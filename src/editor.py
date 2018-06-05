@@ -10,6 +10,7 @@ import pytz as tz
 import tzlocal
 import time
 import games as gamesModule
+import logging
 
 class Editor:
 
@@ -24,19 +25,19 @@ class Editor:
         usecache=False
         if apiVer:
             link = '/api/' + apiVer + link[link.find('/',link.find('/api/')+5):]
-            if self.SETTINGS.get('LOG_LEVEL')>3: print "updated api link per apiVer param:",link
+            logging.debug("updated api link per apiVer param: %s",link)
         if self.gamesLive.get(link) and (self.gamesLive.get(link).get('metaData',{}).get('timeStamp') or self.gamesLive.get(link).get('localTimestamp')) and not forceDownload:
             ts = self.gamesLive.get(link).get('metaData',{}).get('timeStamp',datetime.utcnow().strftime("%Y%m%d_%H%M%S"))
             wait = self.gamesLive.get(link).get('metaData',{}).get('wait','-1')
-            if self.SETTINGS.get('LOG_LEVEL')>3: print "api wait time:",datetime.strptime(ts,"%Y%m%d_%H%M%S") + timedelta(seconds=int(wait))," // current time:",datetime.utcnow()," // use cache (api wait): ",datetime.strptime(ts,"%Y%m%d_%H%M%S") + timedelta(seconds=int(wait)) > datetime.utcnow()," // use cache (local wait):",self.gamesLive.get(link).get('localTimestamp') + timedelta(seconds=localWait) > datetime.utcnow()
+            logging.debug("api wait time: %s // current time: %s  // use cache (api wait): %s // use cache (local wait): %s",datetime.strptime(ts,"%Y%m%d_%H%M%S") + timedelta(seconds=int(wait)), datetime.utcnow(), datetime.strptime(ts,"%Y%m%d_%H%M%S") + timedelta(seconds=int(wait)) > datetime.utcnow(), self.gamesLive.get(link).get('localTimestamp') + timedelta(seconds=localWait) > datetime.utcnow())
             if (ts and wait and datetime.strptime(ts,"%Y%m%d_%H%M%S") + timedelta(seconds=int(wait)) > datetime.utcnow()) or (self.gamesLive.get(link).get('localTimestamp') and self.gamesLive.get(link).get('localTimestamp') + timedelta(seconds=localWait) > datetime.utcnow()):
-                if self.SETTINGS.get('LOG_LEVEL')>3: print "Using cached data for",link,"..."
+                logging.debug("Using cached data for %s...",link)
                 usecache = True
         if not usecache:
             if forceDownload:
-                if self.SETTINGS.get('LOG_LEVEL')>3: print "Forcing downloading of",link,"from MLB API..."
+                logging.debug("Forcing downloading of %s from MLB API...",link)
             else:
-                if self.SETTINGS.get('LOG_LEVEL')>3: print "Downloading",link,"from MLB API..."
+                logging.debug("Downloading %s from MLB API...",link)
             while True:
                 try:
                     api_response = urllib2.urlopen(self.SETTINGS.get('apiURL') + link)
@@ -45,26 +46,26 @@ class Editor:
                     break
                 except urllib2.HTTPError, e:
                     if critical:
-                        if self.SETTINGS.get('LOG_LEVEL')>0: print "ERROR: Couldn't download",link,"from MLB API:",e,": retrying in",sleepTime,"seconds..."
+                        logging.error("Couldn't download %s from MLB API: %s: retrying in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                     else:
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Couldn't download",link,"from MLB API:",e,": continuing in",sleepTime,"seconds..."
+                        logging.error("Couldn't download %s from MLB API: %s: continuing in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                         break
                 except urllib2.URLError, e:
                     if critical:
-                        if self.SETTINGS.get('LOG_LEVEL')>0: print "ERROR: Couldn't connect to MLB API to download",link,":",e,": retrying in",sleepTime,"seconds..."
+                        logging.error("Couldn't connect to MLB API to download %s: %s: retrying in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                     else:
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Couldn't connect to MLB API to download",link,":",e,": continuing in",sleepTime,"seconds..."
+                        logging.error("Couldn't connect to MLB API to download %s: %s: continuing in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                         break
                 except Exception, e:
                     if critical:
-                        if self.SETTINGS.get('LOG_LEVEL')>0: print "ERROR: Unknown error downloading",link," from MLB API:",e,": retrying in",sleepTime,"seconds..."
+                        logging.error("Unknown error downloading %s from MLB API: %s: retrying in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                     else:
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unknown error downloading",link," from MLB API:",e,": continuing in",sleepTime,"seconds..."
+                        logging.error("Unknown error downloading %s from MLB API: %s: continuing in %s seconds...", link, e, sleepTime)
                         time.sleep(sleepTime)
                         break
         return self.gamesLive.get(link)
@@ -79,24 +80,24 @@ class Editor:
         else: todaygames = todaydates[next((i for i,x in enumerate(todaydates) if x.get('date') == day.strftime('%Y-%m-%d')), 0)].get('games')
 
         if len(todaygames) == 0:
-            if self.SETTINGS.get('LOG_LEVEL')>1: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"), "There are no games on",day.strftime("%m/%d/%Y")
+            logging.info("There are no games on %s",day.strftime("%m/%d/%Y"))
             todaygames = {}
 
         if isinstance(todaygames,dict): todaygames = [todaygames]
         return todaygames
 
     def replace_params(self,original,thread,type,k=None,timemachine=False,myteamwon=""):
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Replacing parameters in",thread,type + "..."
+        logging.debug("Replacing parameters in %s %s...",thread,type)
         replaced = original.replace('\{','PLACEHOLDEROPEN').replace('\}','PLACEHOLDERCLOSE').replace('\:','PLACEHOLDERCOLON').replace('\%','PLACEHOLDERMOD')
         while replaced.find('{') != -1:
             modifier = None
             replaceVal = ""
             if replaced.find('}') < replaced.find('{'):
                 if replaced.find('}') == -1:
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Extra { or missing } detected in",thread,type,"at character",str(replaced.find('{')),"- escaping the {..."
+                    logging.warn("Extra { or missing } detected in %s %s at character %s - escaping the {...",thread, type, str(replaced.find('{')))
                     replaced = replaced[0:replaced.find('{')] + 'PLACEHOLDEROPEN' + replaced[replaced.find('{')+1:]
                 else:
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Detected } before { in",thread,type,"at character",str(replaced.find('}')),"- escaping the }..."
+                    logging.warn("Detected } before { in %s %s at character %s - escaping the }...", thread, type, str(replaced.find('}')))
                     replaced = replaced[0:replaced.find('}')] + 'PLACEHOLDERCLOSE' + replaced[replaced.find('}')+1:]
                 continue
             paramParts = [replaced.find('{'), replaced.find('}'), replaced[replaced.find('{')+1:replaced.find('}')], replaced[replaced.find('{'):replaced.find('}')+1]]
@@ -107,18 +108,18 @@ class Editor:
                 modifier = paramParts[2][paramParts[2].find('%')+1:] #extract modifier, remove from param parts, then apply the modifier later
                 paramParts[2] = paramParts[2].replace('%'+modifier,'')
             if paramParts[2].find('{') != -1:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Extra { detected in",thread,type,"at character",str(replaced.find('{')),"- escaping it..."
+                logging.warn("Extra { detected in %s %s at character %s - escaping it...", thread, type, str(replaced.find('{')))
                 replaced = replaced[0:replaced.find('{')] + 'PLACEHOLDEROPEN' + replaced[replaced.find('{')+1:]
                 continue
             if not paramParts[2]:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Empty parameter {} detected in",thread,type,"at characters",str(replaced.find('{')),"and",str(replaced.find('}')),"- escaping both { and }..."
+                logging.warn("Empty parameter {} detected in %s %s at characters %s and %s - escaping both { and }...", thread, type, str(replaced.find('{')), str(replaced.find('}')))
                 replaced = replaced[0:replaced.find('{')] + 'PLACEHOLDEROPEN' + replaced[replaced.find('{')+1:]
                 replaced = replaced[0:replaced.find('}')] + 'PLACEHOLDERCLOSE' + replaced[replaced.find('}')+1:]
                 continue
             if paramParts[2].find(':') != -1: #need to further split param
                 paramParts.append(paramParts[2][:paramParts[2].find(':')])
                 paramParts.append(paramParts[2][paramParts[2].find(':')+1:])
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Found param parts:",paramParts
+                logging.debug("Found param parts: %s",paramParts)
                 if paramParts[4] == 'date':
                     if thread == 'off':
                         replaceVal = datetime.now().strftime(paramParts[5])
@@ -127,7 +128,7 @@ class Editor:
                 elif paramParts[4] == 'myTeam':
                     if paramParts[5] == 'wins':
                         if thread == 'off': #TODO: wins currently not supported for off thread, because this value comes from the game data
-                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:wins' parameter is currently not supported for off day thread",type+", using 0..."
+                            logging.warn("{myTeam:wins} parameter is currently not supported for off day thread %s, using 0...", type)
                             replaceVal =  "0"
                         else:
                             if timemachine and myteamwon=="1":
@@ -136,7 +137,7 @@ class Editor:
                                 replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))
                     elif paramParts[5] == 'losses':
                         if thread == 'off': #TODO: losses currently not supported for off thread, because this value comes from the game data
-                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:losses' parameter is currently not supported for off day thread",type+", using 0..."
+                            logging.warn("{myTeam:losses} parameter is currently not supported for off day thread %s, using 0...", type)
                             replaceVal =  "0"
                         else:
                             if timemachine and myteamwon=="0":
@@ -145,7 +146,7 @@ class Editor:
                                 replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))
                     elif paramParts[5] == 'runs':
                         if thread != 'post': #runs only supported for post thread/tweet
-                            if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'myTeam:runs' parameter is only supported for postgame thread, using 0..."
+                            logging.warn("{myTeam:runs} parameter is only supported for postgame thread, using 0...")
                             replaceVal =  "0"
                         else:
                             replaceVal =  str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('runs'))
@@ -153,7 +154,7 @@ class Editor:
                         replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
                     if thread == 'off':
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'oppTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
+                        logging.warn("{oppTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
                         replaceVal = ''
                     else:
                         if self.games[k].get('homeaway') == 'home': opp = 'away'
@@ -170,7 +171,7 @@ class Editor:
                                 replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('loss'))
                         elif paramParts[5] == 'runs':
                             if thread != 'post': #runs only supported for post thread/tweet
-                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'oppTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                logging.warn("{oppTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('runs'))
@@ -178,7 +179,7 @@ class Editor:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
                     if thread == 'off':
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'awayTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
+                        logging.warn("{awayTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
                         replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
@@ -193,7 +194,7 @@ class Editor:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('away').get('loss'))
                         elif paramParts[5] == 'runs':
                             if thread != 'post': #runs only supported for post thread/tweet
-                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'awayTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                logging.warn("{awayTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('away').get('runs'))
@@ -201,7 +202,7 @@ class Editor:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
                     if thread == 'off':
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'homeTeam' parameter is not supported for off day thread",type,"(only myTeam), removing..."
+                        logging.warn("{homeTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
                         replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
@@ -216,7 +217,7 @@ class Editor:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('home').get('loss'))
                         elif paramParts[5] == 'runs':
                             if thread != 'post': #runs only supported for post thread/tweet
-                                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'homeTeam:runs' parameter is only supported for postgame thread, using 0..."
+                                logging.warn("{homeTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('home').get('runs'))
@@ -224,35 +225,35 @@ class Editor:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
                     if thread == 'off':
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'series' parameter is not supported for off day thread",type+", removing..."
+                        logging.warn("{series} parameter is not supported for off day thread %s, removing...", type)
                         replaceVal =  ''
                     else:
                         if self.games[k].get('gameType') in ['I', 'E', 'S','R']:
-                            if self.SETTINGS.get('LOG_LEVEL')>2: print "{series} parameter only applies to post season games, removing..."
+                            logging.debug("{series} parameter only applies to post season games, removing...")
                             replaceVal =  ''
                         else:
                             series = paramParts[5].replace('%D',self.games[k].get('seriesDescription')).replace('%N',str(self.games[k].get('seriesGameNumber')))
                             replaceVal = series
                 elif paramParts[4] == 'dh':
                     if thread == 'off':
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: 'dh' parameter is not supported for off day thread",type+", removing..."
+                        logging.warn("{dh} parameter is not supported for off day thread %s, removing...", type)
                         replaceVal =  ''
                     else:
                         if self.games[k].get('doubleHeader') == 'N':
-                            if self.SETTINGS.get('LOG_LEVEL')>2: print "{dh} parameter only applies to doubleheader games, removing..."
+                            logging.debug("{dh} parameter only applies to doubleheader games, removing...")
                             replaceVal =  ''
                         else:
                             dh = paramParts[5].replace('%N',str(self.games[k].get('gameNumber')))
                             replaceVal = dh
                 else: #there are no other supported parameters with multiple parts at this time
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unsupported parameter",paramParts[3],"found in",thread,type+", removing..."
+                    logging.error("Unsupported parameter %s found in %s %s, removing...", paramParts[3], thread, type)
                     replaceVal =  ''
             else: #params that don't have multiple parts
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Found title param parts:",paramParts
+                logging.debug("Found title param parts: %s",paramParts)
                 if paramParts[2] == 'vsat': 
                     if thread == "off": 
                         replaceVal =  ''
-                        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: {vsat} parameter is not supported for off day thread",type+", removing..."
+                        logging.warn("{vsat} parameter is not supported for off day thread %s, removing...", type)
                     else:
                         if self.games[k].get('homeaway') == 'home': vsat = "vs"
                         else: vsat = '@'
@@ -262,7 +263,7 @@ class Editor:
                 elif paramParts[2] == 'gameNum':
                     replaceVal = str(self.games[k].get('gameNumber'))
                 else: #there are no other supported parameters without multiple parts at this time
-                    if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unsupported parameter",paramParts[3],"found in",thread,type+", ignoring..."
+                    logging.error("Unsupported parameter %s found in %s %s, ignoring...", paramParts[3], thread, type)
             #apply modifier and replace
             if modifier:
                 if modifier.find('%') != -1: #multiple modifiers detected
@@ -296,7 +297,7 @@ class Editor:
 
         title = self.replace_params(title,thread,'title',k,timemachine,myteamwon)
 
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning",thread,"title:",title,"..."
+        logging.info("Returning %s title: %s...", thread, title)
         return title
 
     def generate_thread_code(self, thread, gameid, othergameid=None):
@@ -369,7 +370,7 @@ class Editor:
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER')
 
         code += "\n\n"
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning all",thread,"thread code..."
+        logging.debug("Returning all %s thread code...", thread)
         return code
 
     def generate_probables(self,files,gameid):
@@ -388,7 +389,7 @@ class Editor:
         root = files["gamecenter"].getroot()
         probables_xml = root.find('probables')
         if probables_xml == -1:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning probables (none)..."
+            logging.debug("Returning probables (none)...")
             return ""
         awayReport = probables_xml.find("away/report").text
         if awayReport == None: awayReport = "No report posted."
@@ -413,7 +414,7 @@ class Editor:
         probables += "|" + homeSubLink + "|" + home_pitcher + "|" + homeReport + "|\n"
         probables += "\n"
 
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning probables..."
+        logging.debug("Returning probables...")
         return probables
 
     def generate_blurb(self,gameid,type='preview'):
@@ -425,20 +426,20 @@ class Editor:
 
         headline = gameContent.get('editorial',{}).get(type,{}).get(homeaway,{}).get('headline')
         if not headline and homeaway != 'mlb':
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "No",homeaway,"headline available, using mlb headline..."
+            logging.debug("No %s headline available, using mlb headline...", homeaway)
             headline = gameContent.get('editorial',{}).get(type,{}).get('mlb',{}).get('headline')
 
         blurbtext = gameContent.get('editorial',{}).get(type,{}).get(homeaway,{}).get('blurb')
         if not blurbtext and homeaway != 'mlb':
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "No",homeaway,"blurb available, using mlb headline..."
+            logging.debug("No %s blurb available, using mlb headline...", homeaway)
             blurbtext = gameContent.get('editorial',{}).get(type,{}).get('mlb',{}).get('headline')
 
         if headline: blurb += "**" + headline + "**"
         if blurbtext: blurb += "\n\n" + blurbtext
         if blurb == "":
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "No blurb available, returning empty string..."
+            logging.debug("No blurb available, returning empty string...")
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning",type,"blurb..."
+            logging.debug("Returning %s blurb...",type)
         return blurb
 
     def download_files(self,dirs): #TODO: Deprecate once Stats API source is found for pitcher reports in `generate_probables()`
@@ -450,7 +451,7 @@ class Editor:
                 if dir[dir.rfind('.'):] == '.json': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = json.load(response)
                 elif dir[dir.rfind('.'):] == '.xml': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = ET.parse(response)
             except Exception,e:
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Error downloading " + dir[dir.rfind('.'):] + ":",str(e)
+                logging.error("Error downloading %s: %s", dir[dir.rfind('.'):], str(e))
                 if dir[dir.rfind('.'):] == '.json': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = {}
                 elif dir[dir.rfind('.'):] == '.xml': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = ET.ElementTree("<root>")
 
@@ -548,7 +549,7 @@ class Editor:
         header += "|**Notes:** ["+self.games[gameid].get('gameInfo').get('away').get('team_name')+"](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + self.games[gameid].get('gameInfo').get('away').get('file_code') + "), ["+self.games[gameid].get('gameInfo').get('home').get('team_name')+"](http://mlb.mlb.com/mlb/presspass/gamenotes.jsp?c_id=" + self.games[gameid].get('gameInfo').get('home').get('file_code') + ")|\n"
         if self.games[gameid].get('description',False): header += "|**Game Note:** " + self.games[gameid].get('description') + "||\n"
         header += "\n\n"
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning header..."
+        logging.debug("Returning header...")
         return header
 
     def generate_boxscore(self,gameid):
@@ -682,15 +683,15 @@ class Editor:
                 boxscore += "|" + str(awayPitchers[i]) + "|" + str(homePitchers[i]) + "|\n"
 
         if boxscore == "":
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning boxscore (none)..."
+            logging.debug("Returning boxscore (none)...")
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning boxscore..."
+            logging.debug("Returning boxscore...")
         return boxscore
 
     def generate_linescore(self,gameid):
         linescore = ""
         if self.games[gameid].get('status').get('abstractGameState') == 'Preview':
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning linescore (none)..."
+            logging.debug("Returning linescore (none)...")
             return linescore
         gameLive = self.api_download(self.games[gameid].get('link'),False,5)
         gameLinescore  = gameLive.get('liveData').get('linescore')
@@ -765,7 +766,7 @@ class Editor:
             linescore += "|" + str(gameLinescore.get('teams').get('home').get('runs',0)) + "|" + str(gameLinescore.get('teams').get('home').get('hits',0)) + "|" + str(gameLinescore.get('teams').get('home').get('errors',0)) + "|" + homeLob
         else:
             linescore += "|" + str(gameLinescore.get('home',{}).get('runs',0)) + "|" + str(gameLinescore.get('home',{}).get('hits',0)) + "|" + str(gameLinescore.get('home',{}).get('errors',0)) + "|" + homeLob
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning linescore..."
+        logging.debug("Returning linescore...")
         return linescore + "\n"
 
     def generate_scoring_plays(self,gameid):
@@ -773,7 +774,7 @@ class Editor:
         gameLive = self.api_download(self.games[gameid].get('link'),False,5)
         gameScoringPlays = gameLive.get('liveData').get('plays').get('scoringPlays')
         if len(gameScoringPlays) == 0:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning scoringplays (none)..."
+            logging.debug("Returning scoringplays (none)...")
             return scoringplays
         gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
         plays = []
@@ -798,7 +799,7 @@ class Editor:
                 else: scoringplays += str(awayScore) + "-" + str(homeScore)
                 scoringplays += " " + self.games[gameid].get('gameInfo').get(leader).get('name_abbrev').upper() + "\n"
             else: scoringplays += str(homeScore) + "-" + str(awayScore) + "\n"
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning scoringplays..."
+        logging.debug("Returning scoringplays...")
         return scoringplays
 
     def generate_highlights(self,gameid,theater_link=False):
@@ -811,7 +812,7 @@ class Editor:
         for x in gameItems:
             unorderedHighlights.update({x.get('id') : x})
         if len(unorderedHighlights) == 0:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning highlights (none)..."
+            logging.debug("Returning highlights (none)...")
             return ""
         sortedHighlights = []
         for x in sorted(unorderedHighlights):
@@ -820,6 +821,7 @@ class Editor:
             team = next((v.get('value') for v in x.get('keywordsDisplay') if v.get('type')=='team_id'),None)
             if not team: subLink='[](/MLB)'
             else: subLink = self.lookup_team_info('sublink','team_id',team)
+            if subLink == "": subLink='[](/MLB)'
             sdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='FLASH_1200K_640X360'),None)
             if not sdLink: sdLink = ""
             else: sdLink = "[SD]("+sdLink+")"
@@ -831,7 +833,7 @@ class Editor:
             gamedate = self.games[gameid].get('gameInfo').get('date_object').strftime('%Y%m%d')
             game_pk = self.games[gameid].get('gamePk')
             highlights += "||See all highlights at [Baseball.Theater](http://baseball.theater/game/" + gamedate + "/" + str(game_pk) + ")||\n"
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning highlights..."
+        logging.debug("Returning highlights...")
         return highlights
 
     def generate_current_state(self,gameid):
@@ -915,10 +917,10 @@ class Editor:
             else:
                 current_state += "###Game Status: " + detailedState
         else:                
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning current_state (none)..."
+            logging.debug("Returning current_state (none)...")
             return current_state
 
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning current_state..."
+        logging.debug("Returning current_state...")
         return current_state
 
     def generate_decisions(self,gameid):
@@ -935,7 +937,7 @@ class Editor:
         if int(homeRuns) > int(awayRuns): winner = "home"
         elif int(awayRuns) > int(homeRuns): winner = "away"
         elif int(homeRuns) == int(awayRuns): 
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning decisions (none, tie)..."
+            logging.debug("Returning decisions (none, tie)...")
             return decisions
 
         loser = "away" if winner=="home" else "home"
@@ -965,7 +967,7 @@ class Editor:
             if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "|\n"
             else: decisions += "Losing pitcher data not available|\n"
 
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning decisions..."
+        logging.debug("Returning decisions...")
         return decisions
 
     def get_status(self,gameid):
@@ -973,10 +975,10 @@ class Editor:
         if len(sched.get('dates'))>1:
             todaygames = sched.get('dates')[next((i for i,x in enumerate(sched.get('dates')) if x.get('date') == self.games[gameid].get('gameInfo').get('date_object').strftime('%Y-%m-%d')), None)].get('games')
             thisgame = next((x for i,x in enumerate(todaygames) if x.get('gamePk') == self.games[gameid].get('gamePk')), None)
-            if self.SETTINGS.get('LOG_LEVEL')>3: print "Got status:",thisgame.get('status').get('abstractGameState'),"/",thisgame.get('status').get('detailedState')
+            logging.debug("Got status: %s/%s", thisgame.get('status').get('abstractGameState'), thisgame.get('status').get('detailedState'))
             return thisgame.get('status')
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>3: print "Got status:",sched.get('dates')[0].get('games')[0].get('status').get('abstractGameState'),"/",sched.get('dates')[0].get('games')[0].get('status').get('detailedState')
+            logging.debug("Got status: %s/%s", sched.get('dates')[0].get('games')[0].get('status').get('abstractGameState'), sched.get('dates')[0].get('games')[0].get('status').get('detailedState'))
             return sched.get('dates')[0].get('games')[0].get('status')
 
     def get_gameDate(self,gamePk,d=datetime.today().date()):
@@ -984,10 +986,10 @@ class Editor:
         if len(sched.get('dates'))>1:
             todaygames = sched.get('dates')[next((i for i,x in enumerate(sched.get('dates')) if x.get('date') == d.strftime('%Y-%m-%d')), None)].get('games')
             thisgame = next((x for i,x in enumerate(todaygames) if str(x.get('gamePk')) == str(gamePk)), None)
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Got gameDate:",thisgame.get('gameDate')
+            logging.debug("Got gameDate: %s", thisgame.get('gameDate'))
             return thisgame.get('gameDate')
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Got gameDate:",sched.get('dates')[0].get('games')[0].get('gameDate')
+            logging.debug("Got gameDate: %s", sched.get('dates')[0].get('games')[0].get('gameDate'))
             return sched.get('dates')[0].get('games')[0].get('gameDate')
 
     def generate_status(self,k,include_next_game=False):
@@ -996,7 +998,7 @@ class Editor:
         detailedState = self.games[k].get('status').get('detailedState')
         abstractGameState = self.games[k].get('status').get('abstractGameState')
         reason = self.games[k].get('status').get('reason')
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Status:",abstractGameState,"/",detailedState
+        logging.debug("Status: %s/%s", abstractGameState, detailedState)
         homeRuns = gamelive.get('liveData').get('linescore').get('home',{}).get('runs',0)
         awayRuns = gamelive.get('liveData').get('linescore').get('away',{}).get('runs',0)
         homeName = self.games[k].get('gameInfo').get('home').get('team_name')
@@ -1007,17 +1009,17 @@ class Editor:
                 status += ": " + awayRuns + "-" + homeRuns + " " + awayName + "\n"
                 status += self.generate_decisions(k)
                 if include_next_game: status += "\n" + self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Final/Away Win)..."
+                logging.info("Returning status (Final/Away Win)...")
                 return status
             elif int(homeRuns) > int(awayRuns):
                 status += ": " + homeRuns + "-" + awayRuns + " " + homeName + "\n"
                 status += self.generate_decisions(k)
                 if include_next_game: status += "\n" + self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Final/Home Win)..."
+                logging.info("Returning status (Final/Home Win)...")
                 return status
             elif int(homeRuns) == int(awayRuns):
                 if include_next_game: status += "\n\n" + self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Final/Tie)..."
+                logging.info("Returning status (Final/Tie)...")
                 return status
         elif detailedState.startswith("Postponed") or detailedState.startswith("Suspended") or detailedState.startswith("Cancelled"):
             if reason:
@@ -1028,10 +1030,10 @@ class Editor:
             else:
                 status += "##Game Status: " + detailedState + "\n\n"
             if include_next_game: status += self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (Postponed, Suspended, or Cancelled)..."
+            logging.info("Returning status (Postponed, Suspended, or Cancelled)...")
             return status
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning status (none)..."
+            logging.debug("Returning status (none)...")
             return status
 
     def generate_next_game(self,next_game=None,team_id="",thisPk=0):
@@ -1049,9 +1051,9 @@ class Editor:
                 if next_game.get('series_num') != '0' and next_game.get('gameType') not in ['I', 'E', 'S','R']:
                     next += " Game " + next_game.get('series_num')
                 next += ")"
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning next game..."
+            logging.debug("Returning next game...")
             return next
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game not found, returning empty string..."
+        logging.debug("Next game not found, returning empty string...")
         return next
 
     def didmyteamwin(self, k):
@@ -1060,7 +1062,7 @@ class Editor:
         hometeam = self.games[k].get('teams',{}).get('home',{}).get('team',{}).get('id')
         awayteam = self.games[k].get('teams',{}).get('away',{}).get('team',{}).get('id')
         if self.games[k].get('homeaway') not in ["home","away"]:
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Cannot determine if my team is home or away, returning empty string for whether my team won..."
+            logging.error("Cannot determine if my team is home or away, returning empty string for whether my team won...")
             return myteamwon
         if self.games[k].get('status').get('abstractGameState') == "Final" and not self.games[k].get('status').get('detailedState').startswith("Postponed") and not self.games[k].get('status').get('detailedState').startswith("Cancelled"):
             gameLive = self.api_download(self.games[k].get('link'))
@@ -1068,7 +1070,7 @@ class Editor:
             awayteamruns = int(gameLive.get('liveData').get('linescore',{}).get('away',{}).get('runs',0))
             if hometeamruns == awayteamruns:
                 myteamwon = "2"
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won (2-TIE)..."
+                logging.debug("Returning whether my team won (2-TIE)...")
                 return myteamwon
             else:
                 if hometeamruns < awayteamruns:
@@ -1076,36 +1078,36 @@ class Editor:
                         myteamwon = "0"
                     elif self.games[k].get('homeaway') == "away":
                         myteamwon = "1"
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won ("+myteamwon+")..."
+                    logging.debug("Returning whether my team won (%s)...", myteamwon)
                     return myteamwon
                 elif hometeamruns > awayteamruns:
                     if self.games[k].get('homeaway') == "home":
                         myteamwon = "1"
                     elif self.games[k].get('homeaway') == "away":
                         myteamwon = "0"
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won ("+myteamwon+")..."
+                    logging.debug("Returning whether my team won (%s)...", myteamwon)
                     return myteamwon
         elif self.games[k].get('status').get('detailedState').startswith("Postponed") or self.games[k].get('status').get('detailedState').startswith("Suspended") or self.games[k].get('status').get('detailedState').startswith("Cancelled"):
             myteamwon = "3"
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won: (3-postponed, suspended, or canceled)..."
+            logging.debug("Returning whether my team won: (3-postponed, suspended, or canceled)...")
             return myteamwon
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning whether my team won: (exception)..." + myteamwon
+        logging.debug("Returning whether my team won: (exception):  %s...", myteamwon)
         return myteamwon
 
     def next_game(self,check_days=14,thisPk=0,team_id=""):
         if not(team_id): team_id = self.lookup_team_info('team_id','team_code',self.SETTINGS.get('TEAM_CODE'))
-        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for next game..."
+        logging.info("Searching for next game...")
         if thisPk==None: thisPk=0
         today = datetime.today().date()
         #today = datetime.strptime('2018-04-06','%Y-%m-%d').date() # leave commented unless testing
         for d in (today + timedelta(days=x) for x in range(0, check_days)):
             next_game = {}
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Searching for games on",d
+            logging.debug("Searching for games on %s",d)
             daygames = self.get_schedule(d,team_id)
 
             i=0
             if not daygames[0]:
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "No games found on",d
+                logging.debug("No games found on %s",d)
                 continue
 
             for daygame in daygames:
@@ -1118,12 +1120,14 @@ class Editor:
                     homeaway = 'away'
                 if homeaway != None:
                     if str(daygame.get('gamePk')) == str(thisPk) and d==today:
-                        if self.SETTINGS.get('LOG_LEVEL')>2: print "Skipping current game on",d
+                        logging.debug("Skipping current game on %s",d)
                     elif daygame.get('doubleHeader') in ['Y','S']:
-                        #make sure not to return DH game 1 if current game is DH game 2
-                        thisgame = self.get_teams_time(pk=thisPk,d=d)
                         gameinfo = self.get_teams_time(pk=daygame.get('gamePk'),d=d)
-                        if thisgame.get('date_object') > gameinfo.get('date_object'): continue
+                        if thisPk != 0:
+                            thisgame = self.get_teams_time(pk=thisPk,d=d)
+                        if thisPk != 0 and thisgame.get('date_object') > gameinfo.get('date_object'):
+                            #make sure not to return DH game 1 if current game is DH game 2
+                            continue
                         else:
                             next_game[i] = {'pk': daygame.get('gamePk'), 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : gameinfo.get('home').get('team_code'), 'away_code' : gameinfo.get('away').get('team_code'), 'home_team_name' : gameinfo.get('home').get('team_name'), 'away_team_name' : gameinfo.get('away').get('team_name'), 'event_time' : gameinfo.get('date_object').strftime("%I:%M %p %Z"), 'series' : daygame.get('seriesDescription'), 'series_num' : daygame.get('seriesGameNumber'), 'gameType' : daygame.get('gameType')}
                             i += 1
@@ -1133,58 +1137,61 @@ class Editor:
                         i += 1
 
             if len(next_game): 
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "next_game found game(s):",next_game
+                logging.debug("next_game found game(s):",next_game)
             if len(next_game)>1:
                 for ngk,ng in next_game.items():
-                    if (ng.get('homeaway')=='home' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('away_code'))==None) or (ng.get('homeaway')=='away' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('home_code'))==None):
-                        if self.SETTINGS.get('LOG_LEVEL')>2: print "Found game with placeholder opponent, skipping " + ng.get('pk') + "..."
+                    if (ng.get('homeaway')=='home' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('away_code'))=="") or (ng.get('homeaway')=='away' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('home_code'))==""):
+                        logging.debug("Found game with placeholder opponent, skipping %s...", ng.get('pk'))
                     else:
-                        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game ("+str(ng.get('pk'))+")",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
+                        logging.info("Found next game (%s) %s day(s) away on %s...", str(ng.get('pk')), (d - today).days, d.strftime('%m/%d/%Y'))
                         return ng
                 else:
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Next game lookup found only games with placeholder opponents, returning the first one..."
+                    logging.info("Next game lookup found only games with placeholder opponents, returning the first one...")
                     return next_game[0]
             elif len(next_game)==1:
-                if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found next game",(d - today).days,"day(s) away on",d.strftime('%m/%d/%Y') + "..."
+                logging.info("Found next game %s day(s) away on %s...", (d - today).days, d.strftime('%m/%d/%Y'))
                 return next_game[0]
-        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in next",check_days,"days..."
+        logging.info("Found no games in next %s days...", check_days)
         return {}
 
     def last_game(self,check_days, team_id=""):
-        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Searching for last game..."
+        logging.info("Searching for last game...")
         last_game = {}
         today = datetime.today().date()
         #today = datetime.strptime('2018-04-06','%Y-%m-%d').date() # leave commented unless testing
         for d in (today - timedelta(days=x) for x in range(1, check_days)):
-            if self.SETTINGS.get('LOG_LEVEL')>2: print "Searching for games on",d
+            logging.debug("Searching for games on %s",d)
             daygames = self.get_schedule(d,team_id)
             if not daygames[0]:
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "No games found on",d
+                logging.debug("No games found on %s",d)
             else:
-                if self.SETTINGS.get('LOG_LEVEL')>2: print "last_game found game(s):",daygames
+                logging.debug("last_game found game(s): %s",daygames)
                 last_game.update({'date' : d, 'days_ago' : (today-d).days, 'pk' : daygames[0].get('gamePk')})
                 return last_game
-        if self.SETTINGS.get('LOG_LEVEL')>2: print datetime.strftime(datetime.today(), "%d %I:%M:%S %p"),"Found no games in last",check_days,"days..."
+        logging.info("Found no games in last %s days...",check_days)
         return last_game
 
     def lookup_team_info(self, field="name_abbrev", lookupfield="team_code", lookupval=None, sport_code="mlb"):
         if sport_code==None: sport_code='mlb'
+        if field=='all': ret = {}
+        else: ret = ""
         if not self.TEAMINFO.get(sport_code):
             try:
-                if self.SETTINGS.get('LOG_LEVEL')>3: print "Downloading team info from MLB: http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27" + sport_code + "%27&active_sw=%27Y%27&all_star_sw=%27N%27"
-                response = urllib2.urlopen("http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27" + sport_code + "%27&active_sw=%27Y%27&all_star_sw=%27N%27")
+                sportCodeUrl = "http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27" + sport_code + "%27&active_sw=%27Y%27&all_star_sw=%27N%27"
+                logging.debug("Downloading team info from MLB: %s", sportCodeUrl)
+                response = urllib2.urlopen(sportCodeUrl)
                 self.TEAMINFO.update({sport_code : json.load(response)})
             except urllib2.URLError, e:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Couldn't connect to MLB server to download team info, returning None:",e
-                return -1
+                logging.error("Couldn't connect to MLB server to download team info, returning null: %s",e)
+                return ret
             except urllib2.HTTPError, e:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Couldn't download team info, returning None:",e
-                return -1
+                logging.error("Couldn't download team info, returning null: %s",e)
+                return ret
             except Exception as e:
-                if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Unknown error downloading team info, returning None:",e
-                return -1
+                logging.error("Unknown error downloading team info, returning null: %s",e)
+                return ret
         else:
-            if self.SETTINGS.get('LOG_LEVEL')>3: print 'Using cached team info for sport code ' + sport_code + '...'
+            logging.debug("Using cached team info for sport code %s...", sport_code)
 
         teamlist = self.TEAMINFO.get(sport_code).get('team_all').get('queryResults').get('row')
         for team in teamlist:
@@ -1227,13 +1234,13 @@ class Editor:
                         "120": "/r/Nationals",
                         "144": "/r/Braves"
                     }
-                    if field == "sublink": return "[" + team.get('name_abbrev') + "](" + subs.get(team_id) + ")"
-                    else: return subs.get(team_id)
+                    if field == "sublink": return "[" + team.get('name_abbrev','') + "](" + subs.get(team_id,'/MLB') + ")"
+                    else: return subs.get(team_id,'MLB')
                 else:
                     return team.get(field)
 
-        if self.SETTINGS.get('LOG_LEVEL')>1: print "WARNING: Couldn't look up",field,"from",lookupfield,"=",lookupval + ", returning None..."
-        return None
+        logging.error("Couldn't look up %s from %s=%s, returning null...",field, lookupfield, lookupval)
+        return ret
 
     def lookup_player_info(self, id, field, field2=None):
             if not id: return None
@@ -1269,7 +1276,7 @@ class Editor:
                 if (str(schedgame.get('gamePk')) != str(game.get('game').get('pk'))) and (int(myteam) in [int(schedgame.get('teams').get('home').get('team').get('id')),int(schedgame.get('teams').get('away').get('team').get('id'))]) and schedgame.get('doubleHeader') == 'Y' and int(schedgame.get('gameNumber')) == int(game.get('game').get('gameNumber'))-1:
                     othergame = self.get_teams_time(url=schedgame.get('link'),d=date_object.date())
                     gameDate_object = othergame.get('date_object_utc') + timedelta(hours=3, minutes=30)
-                    if self.SETTINGS.get('LOG_LEVEL')>2: print "Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3.5 hours for Game 2 (",gameDate_object,")..."
+                    logging.warn("Detected doubleheader Game 2 start time is before Game 1 start time. Using Game 1 start time + 3.5 hours for Game 2 (%s)...", gameDate_object)
                     date_object = self.convert_tz(gameDate_object,'team')
                     break
         first_pitch = date_object.strftime('%I:%M %p %Z')
@@ -1301,5 +1308,5 @@ class Editor:
 
         teams.update({'home' : home, 'away' : away, 'time' : first_pitch, 'status': game.get('status'), 'date_object' : date_object, 'date_object_utc' : gameDate_object})
 
-        if self.SETTINGS.get('LOG_LEVEL')>2: print "Returning teams and time for specified game..."
+        logging.debug("Returning teams and time for specified game...")
         return teams

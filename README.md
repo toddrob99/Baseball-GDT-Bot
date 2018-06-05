@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.1
+### Current Version: 5.1.2
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -42,7 +42,23 @@ The following settings can be configured in `/src/settings.json`:
 
 * `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") **NOTE**: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
 
-* `LOG_LEVEL` - controls the amount of logging to the console (0 for none--not recommended, 1 for error only, 2 for normal/info (default), 3 for debug, 4 for verbose debug)
+* `LOGGING` - controls the amount of logging to the console and file (rotated daily with the previous week's log files retained)
+	* `FILE` - do you want to log to a file (`TEAM_CODE-bot.log` in the `/logs` directory, e.g. `/logs/phi-bot.log`)? (true/false)
+	* `FILE_LOG_LEVEL` - how much detail do you want logged to file? (`CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG` - default/recommended: `DEBUG`)
+	* `CONSOLE` - do you want to log to the console? (true/false)
+	* `CONSOLE_LOG_LEVEL` - how much detail do you want logged to the console? (`CRITICAL`, `ERROR`, `WARNING`, `INFO`, `DEBUG` - default/recommended: `INFO`)
+
+* `NOTIFICATIONS` - settings related to notifications
+	* `PROWL` - settings related to Prowl notifications
+		* `ENABLED` - do you want to enable Prowl notifications? (true/false)
+		* `API_KEY` - your Prowl API key, generate at https://www.prowlapp.com/api_settings.php
+		* `PRIORITY` - with what priority should the notifications be sent (-2: Very Low, -1: Moderate, 0: Normal, 1: High, 2: Emergency, default 0)
+		* `NOTIFY_WHEN` - enable/disable individual notifications
+			* `OFF_THREAD_SUBMITTED` - send a notification when off day thread is posted (true/false)
+			* `PRE_THREAD_SUBMITTED` - send a notification when pregame thread is posted (true/false)
+			* `GAME_THREAD_SUBMITTED` - send a notification when game thread is posted (true/false)
+			* `POST_THREAD_SUBMITTED` - send a notification when postgame thread is posted (true/false)
+			* `END_OF_DAY_EDIT_STATS` - send notifications at the end of each day with stats about edit rate for each game, and averages across all games since last bot restart (true/false)
 
 * `TWITTER` - holds OAuth fields for Twitter API connection
 	* `CONSUMER_KEY`, `CONSUMER_SECRET`, `ACCESS_TOKEN`, `ACCESS_SECRET` - all required to use Twitter features - follow the instructions at https://python-twitter.readthedocs.io/en/latest/getting_started.html
@@ -131,8 +147,8 @@ The following settings can be configured in `/src/settings.json`:
 		* `NEXT_GAME` - include next game date/time/opponent in the postgame thread (true/false)
 	* `TWITTER` - settings for tweeting postgame thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
-		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name} {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
-		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name} {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name}, {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name}, {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 
 ---
@@ -152,9 +168,18 @@ Modules being used:
 	pytz - timezone conversion
 	localtz - to determine bot's local timezone
 	python-twitter (optional) - interfacing Twitter
+	pyprowl (included) - interfacing Prowl
 
 ---
 ### Change Log
+
+#### v5.1.2
+* Added `logger.py` module, which contains the `Logger` class that adds console and file handlers to the root logger. Enable and set log level for console and file in `settings.json` with the new `LOGGING` section (copy from `sample_settings.json`). `LOG_LEVEL` setting is deprecated. Default is file enabled/DEBUG and console enabled/INFO. Log files will be stored in `/logs` and named `TEAM_CODE-bot.log` (e.g. `phi-bot.log`), rotated daily with a week's logs retained.
+* Added `self.editStats` dict to hold data about checks and edits for each game thread. At the end of each day, an INFO entry will be logged with the totals and rate (edits/checks)
+* Added Prowl notification support. Enable Prowl notifications overall, as well as individual notifications in the new `NOTIFICATIONS` : `PROWL` section in `settings.json`. See `README.md` for details and copy from `sample_settings.json`
+* Fixed crash when MLB posts a game highlight using an all-star team code, in this case team_id 159, "American League All-Stars"
+* Fixed stale team records in pregame and game thread titles #69
+* Fixed bug that occurs when Twitter feature is turned off for all threads (or Twitter settings are missing)
 
 #### v5.1.1
 * Fixed bug in `next_game()` that resulted in doubleheader game 1 being listed as the next game after doubleheader game 2

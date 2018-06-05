@@ -8,7 +8,26 @@
     "TEAM_CODE": "XXX",
     "STICKY": true,
     "FLAIR_MODE": "none",
-    "LOG_LEVEL": 2,
+    "LOGGING": {
+        "FILE": true,
+        "FILE_LOG_LEVEL": "DEBUG",
+        "CONSOLE": true,
+        "CONSOLE_LOG_LEVEL": "INFO"
+    },
+    "NOTIFICATIONS": {
+        "PROWL": {
+            "ENABLED": false,
+            "API_KEY": "XXX",
+            "PRIORITY": 0,
+            "NOTIFY_WHEN": {
+                "OFF_THREAD_SUBMITTED": true,
+                "PRE_THREAD_SUBMITTED": true,
+                "GAME_THREAD_SUBMITTED": true,
+                "POST_THREAD_SUBMITTED": true,
+                "END_OF_DAY_EDIT_STATS": true
+            }
+        }
+    },
     "OFF_THREAD": {
         "ENABLED": true,
         "TITLE": "OFF DAY THREAD: {date:%A, %B %d}",

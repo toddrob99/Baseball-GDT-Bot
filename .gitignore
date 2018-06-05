@@ -5,3 +5,4 @@ settings*.json
 *.out
 *-main.py
 main-*.py
+/logs

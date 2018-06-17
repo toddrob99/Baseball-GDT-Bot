@@ -30,565 +30,86 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 from logger import Logger
+from config import Config
 
 class Bot:
 
-    def __init__(self):
-        self.VERSION = '5.1.2'
-        self.SETTINGS = {}
+    def __init__(self, settings_file):
+        self.VERSION = '5.1.3'
         self.games = games.Games().games
         self.gamesLive = games.Games().gamesLive
         self.editStats = {}
         self.editStatHistory = []
-
-    def read_settings(self):
-        import os
-        cwd = os.path.dirname(os.path.realpath(__file__))
-        fatal_errors = []
-        warnings = []
-        with open(cwd + '/settings.json') as data:
-            self.SETTINGS = json.load(data)
-
-            if self.SETTINGS.get('CLIENT_ID') == None: 
-                fatal_errors.append('Missing CLIENT_ID')
-
-            if self.SETTINGS.get('CLIENT_SECRET') == None:
-                fatal_errors.append('Missing CLIENT_SECRET')
-
-            if self.SETTINGS.get('REFRESH_TOKEN') == None:
-                fatal_errors.append('Missing REFRESH_TOKEN')
-
-            if self.SETTINGS.get('USER_AGENT') == None:
-                warnings.append('Missing USER_AGENT, using default ("")...')
-                self.SETTINGS.update({'USER_AGENT' : ''})
-            self.SETTINGS.update({'FULL_USER_AGENT' : "OAuth Baseball Game Thread Bot for Reddit v" + self.VERSION + " https://github.com/toddrob99/Baseball-GDT-Bot " + self.SETTINGS.get('USER_AGENT')})
-
-            if self.SETTINGS.get('SUBREDDIT') == None:
-                fatal_errors.append('Missing SUBREDDIT')
-
-            if self.SETTINGS.get('TEAM_CODE') == None:
-                fatal_errors.append('Missing TEAM_CODE')
-
-            if self.SETTINGS.get('STICKY') == None:
-                warnings.append('Missing STICKY, using default (true - make sure your bot user has mod rights)...')
-                self.SETTINGS.update({'STICKY' : True})
-
-            if self.SETTINGS.get('FLAIR_MODE') not in ['', 'none', 'submitter', 'mod']:
-                warnings.append('Missing or invalid FLAIR_MODE, using default ("none")...')
-                self.SETTINGS.update({'FLAIR_MODE' : 'none'})
-
-            if self.SETTINGS.get('LOGGING') == None:
-                warnings.append('Missing LOGGING, using defaults (FILE: true, FILE_LOG_LEVEL: DEBUG, CONSOLE, true, CONSOLE_LOG_LEVEL: INFO)...')
-                self.SETTINGS.update({'LOGGING' : {'FILE': True, 'FILE_LOG_LEVEL': 'DEBUG', 'CONSOLE': True, 'CONSOLE_LOG_LEVEL': 'INFO'}})
-
-            if self.SETTINGS.get('LOGGING').get('FILE') == None:
-                warnings.append('Missing LOGGING : FILE, using default (true)...')
-                self.SETTINGS['LOGGING'].update({'FILE': True})
-
-            if self.SETTINGS.get('LOGGING').get('FILE_LOG_LEVEL') == None:
-                warnings.append('Missing LOGGING : FILE_LOG_LEVEL, using default (DEBUG)...')
-                self.SETTINGS['LOGGING'].update({'FILE_LOG_LEVEL': 'DEBUG'})
-
-            if self.SETTINGS.get('LOGGING').get('CONSOLE') == None:
-                warnings.append('Missing LOGGING : CONSOLE, using default (true)...')
-                self.SETTINGS['LOGGING'].update({'CONSOLE': True})
-
-            if self.SETTINGS.get('LOGGING').get('CONSOLE_LOG_LEVEL') == None:
-                warnings.append('Missing LOGGING : CONSOLE_LOG_LEVEL, using default (INFO)...')
-                self.SETTINGS['LOGGING'].update({'CONSOLE_LOG_LEVEL': 'INFO'})
-
-            if self.SETTINGS.get('NOTIFICATIONS') == None:
-                warnings.append('Missing NOTIFICATIONS, using defaults (PROWL: ENABLED: false, API_KEY: "", PRIORITY: 0, NOTIFY_WHEN: OFF_THREAD_SUBMITTED: true, PRE_THREAD_SUBMITTED: true, GAME_THREAD_SUBMITTED: true, POST_THREAD_SUBMITTED: true, END_OF_DAY_EDIT_STATS: true)...')
-                self.SETTINGS.update({'NOTIFICATIONS' : {'PROWL' : {'ENABLED': False, 'API_KEY': '', 'PRIORITY': 0, 'NOTIFY_WHEN' : {'OFF_THREAD_SUBMITTED': True, 'PRE_THREAD_SUBMITTED': True, 'GAME_THREAD_SUBMITTED': True, 'POST_THREAD_SUBMITTED': True, 'END_OF_DAY_EDIT_STATS': True}}}})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL, using defaults (ENABLED: false, API_KEY: "", PRIORITY: 0, NOTIFY_WHEN: OFF_THREAD_SUBMITTED: true, PRE_THREAD_SUBMITTED: true, GAME_THREAD_SUBMITTED: true, POST_THREAD_SUBMITTED: true, END_OF_DAY_EDIT_STATS: true)...')
-                self.SETTINGS['NOTIFICATIONS'].update({'PROWL' : {'ENABLED': False, 'API_KEY': '', 'PRIORITY': 0, 'NOTIFY_WHEN' : {'OFF_THREAD_SUBMITTED': True, 'PRE_THREAD_SUBMITTED': True, 'GAME_THREAD_SUBMITTED': True, 'POST_THREAD_SUBMITTED': True, 'END_OF_DAY_EDIT_STATS': True}}})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : ENABLED, using default (false)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'ENABLED': False})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('API_KEY') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : API_KEY, using default ("") and disabling Prowl overall...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'API_KEY': False})
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'ENABLED': False})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY') == None or self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY') not in [-2, -1, 0, 1, 2]:
-                warnings.append('Missing or invalid NOTIFICATIONS : PROWL : PRIORITY, using default (0)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'PRIORITY': 0})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN, using defaults (OFF_THREAD_SUBMITTED: true, PRE_THREAD_SUBMITTED: true, GAME_THREAD_SUBMITTED: true, POST_THREAD_SUBMITTED: true, END_OF_DAY_EDIT_STATS: true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'NOTIFY_WHEN': {'OFF_THREAD_SUBMITTED': True, 'PRE_THREAD_SUBMITTED': True, 'GAME_THREAD_SUBMITTED': True, 'POST_THREAD_SUBMITTED': True, 'END_OF_DAY_EDIT_STATS': True}})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('OFF_THREAD_SUBMITTED') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN : OFF_THREAD_SUBMITTED, using default (true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL']['NOTIFY_WHEN'].update({'OFF_THREAD_SUBMITTED': True,})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('PRE_THREAD_SUBMITTED') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN : PRE_THREAD_SUBMITTED, using default (true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL']['NOTIFY_WHEN'].update({'PRE_THREAD_SUBMITTED': True,})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('GAME_THREAD_SUBMITTED') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN : GAME_THREAD_SUBMITTED, using default (true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL']['NOTIFY_WHEN'].update({'GAME_THREAD_SUBMITTED': True,})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('POST_THREAD_SUBMITTED') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN : POST_THREAD_SUBMITTED, using default (true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL']['NOTIFY_WHEN'].update({'POST_THREAD_SUBMITTED': True,})
-
-            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('END_OF_DAY_EDIT_STATS') == None:
-                warnings.append('Missing NOTIFICATIONS : PROWL : NOTIFY_WHEN : END_OF_DAY_EDIT_STATS, using default (true)...')
-                self.SETTINGS['NOTIFICATIONS']['PROWL']['NOTIFY_WHEN'].update({'END_OF_DAY_EDIT_STATS': True,})
-
-            if self.SETTINGS.get('OFF_THREAD') == None:
-                warnings.append('Missing OFF_THREAD, using defaults (ENABLED: true, TITLE: "OFF DAY THREAD: {date:%A, %B %d}", TIME: 9AM, FOOTER: "No game today. Feel free to discuss whatever you want in this thread.", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", SUPPRESS_OFFSEASON: true, TWITTER:ENABLED: false, TWITTER:TEXT: "")...')
-                self.SETTINGS.update({'OFF_THREAD' : {'ENABLED' : True,'TITLE' : 'OFF DAY THREAD: {date:%A, %B %d}','TIME' : '9AM', 'FOOTER' : 'No game today. Feel free to discuss whatever you want in this thread.', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'SUPPRESS_OFFSEASON' : True, 'TWITTER' : {'ENABLED' : False, 'TEXT' : ""}}})
-
-            if self.SETTINGS.get('OFF_THREAD').get('ENABLED') == None:
-                warnings.append('Missing OFF_THREAD : ENABLED, using default (true)...')
-                self.SETTINGS['OFF_THREAD'].update({'ENABLED' : True})
-
-            if self.SETTINGS.get('OFF_THREAD').get('TITLE') == None:
-                warnings.append('Missing OFF_THREAD : TITLE, using default ("OFF DAY THREAD: {date:%A, %B %d}")...')
-                self.SETTINGS['OFF_THREAD'].update({'TITLE' : 'OFF DAY THREAD: {date:%A, %B %d}'})
-
-            if self.SETTINGS.get('OFF_THREAD').get('TIME') == None:
-                warnings.append('Missing OFF_THREAD : TIME, using default ("9AM")...')
-                self.SETTINGS['OFF_THREAD'].update({'TIME' : '9AM'})
-
-            if self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') == None:
-                warnings.append('Missing OFF_THREAD : SUGGESTED_SORT, using default ("new" - make sure your bot user has mod rights)...')
-                self.SETTINGS['OFF_THREAD'].update({'SUGGESTED_SORT' : 'new'})
-
-            if self.SETTINGS.get('OFF_THREAD').get('INBOX_REPLIES') == None:
-                warnings.append('Missing OFF_THREAD : INBOX_REPLIES, using default (false)...')
-                self.SETTINGS['OFF_THREAD'].update({'INBOX_REPLIES' : False})
-
-            if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == None:
-                warnings.append('Missing OFF_THREAD : FLAIR, using default ("")...')
-                self.SETTINGS['OFF_THREAD'].update({'FLAIR' : ''})
-
-            if self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON') == None:
-                warnings.append('Missing OFF_THREAD : SUPPRESS_OFFSEASON, using default (true)...')
-                self.SETTINGS['OFF_THREAD'].update({'SUPPRESS_OFFSEASON' : True})
-
-            if self.SETTINGS.get('OFF_THREAD').get('FOOTER') == None:
-                warnings.append('Missing OFF_THREAD : FOOTER, using default ("No game today. Feel free to discuss whatever you want in this thread.")...')
-                self.SETTINGS['OFF_THREAD'].update({'FOOTER' : 'No game today. Feel free to discuss whatever you want in this thread.'})
-
-            if self.SETTINGS.get('OFF_THREAD').get('TWITTER') == None:
-                warnings.append('Missing OFF_THREAD : TWITTER, using defaults (ENABLED: false, TEXT: "")...')
-                self.SETTINGS['OFF_THREAD'].update({'TWITTER' : {'ENABLED' : False, 'TEXT' : ""}})
-
-            if self.SETTINGS.get('OFF_THREAD').get('TWITTER').get('ENABLED') == None:
-                warnings.append('Missing OFF_THREAD : TWITTER : ENABLED, using default (false)...')
-                self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False})
-
-            if self.SETTINGS.get('OFF_THREAD').get('TWITTER').get('TEXT') == None:
-                warnings.append('Missing OFF_THREAD : TWITTER : TEXT, using default ("")...')
-                self.SETTINGS['OFF_THREAD']['TWITTER'].update({'TEXT' : ""})
-
-            if self.SETTINGS.get('PRE_THREAD') == None:
-                warnings.append('Missing PRE_THREAD, using defaults (TITLE: "PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", CONSOLIDATED_DH_TITLE: "PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}", TIME: 9AM, SUPPRESS_MINUTES: 0, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BLURB: true, PROBABLES: true, FOOTER: "", TWITTER:ENABLED: false, TWITTER:TEXT: "", TWITTER:CONSOLIDATED_DH_TEXT: "")...')
-                self.SETTINGS.update({'PRE_THREAD' : {'TITLE' : 'PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'CONSOLIDATED_DH_TITLE' : 'PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}', 'TIME' : '9AM', 'SUPPRESS_MINUTES' : 0, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BLURB' : True, 'PROBABLES' : True, 'FOOTER' : ""}, 'TWITTER' : {'ENABLED' : False, 'TEXT' : "", 'CONSOLIDATED_DH_TEXT' : ""}}})
-
-            if self.SETTINGS.get('PRE_THREAD').get('ENABLED') == None:
-                warnings.append('Missing PRE_THREAD : ENABLED, using default (true)...')
-                self.SETTINGS['PRE_THREAD'].update({'ENABLED' : True})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TITLE') == None:
-                warnings.append('Missing PRE_THREAD : TITLE, using default ("PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['PRE_THREAD'].update({'TITLE' : 'PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATED_DH_TITLE') == None:
-                warnings.append('Missing PRE_THREAD : CONSOLIDATED_DH_TITLE, using default ("PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}")...')
-                self.SETTINGS['PRE_THREAD'].update({'CONSOLIDATED_DH_TITLE' : 'PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}'})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TIME') == None:
-                warnings.append('Missing PRE_THREAD : TIME, using default ("9AM")...')
-                self.SETTINGS['PRE_THREAD'].update({'TIME' : '9AM'})
-
-            if self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES') == None:
-                warnings.append('Missing PRE_THREAD : SUPPRESS_MINUTES, using default (0)...')
-                self.SETTINGS['PRE_THREAD'].update({'SUPPRESS_MINUTES' : 0})
-
-            if self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') == None:
-                warnings.append('Missing PRE_THREAD : SUGGESTED_SORT, using default ("new" - make sure your bot user has mod rights)...')
-                self.SETTINGS['PRE_THREAD'].update({'SUGGESTED_SORT' : 'new'})
-
-            if self.SETTINGS.get('PRE_THREAD').get('INBOX_REPLIES') == None:
-                warnings.append('Missing PRE_THREAD : INBOX_REPLIES, using default (false)...')
-                self.SETTINGS['PRE_THREAD'].update({'INBOX_REPLIES' : False})
-
-            if self.SETTINGS.get('PRE_THREAD').get('FLAIR') == None:
-                warnings.append('Missing PRE_THREAD : FLAIR, using default ("")...')
-                self.SETTINGS['PRE_THREAD'].update({'FLAIR' : ''})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') == None:
-                warnings.append('Missing PRE_THREAD : CONSOLIDATE_DH, using default (true)...')
-                self.SETTINGS['PRE_THREAD'].update({'CONSOLIDATE_DH' : True})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT') == None:
-                warnings.append('Missing PRE_THREAD : CONTENT, using defaults (HEADER: true, BLURB: true, PROBABLES: true, FOOTER: "")...')
-                self.SETTINGS['PRE_THREAD'].update({'CONTENT' : {'HEADER': True, 'BLURB' : True, 'PROBABLES' : True, 'FOOTER' : ""}})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('HEADER') == None:
-                warnings.append('Missing PRE_THREAD : CONTENT : HEADER, using default (true)...')
-                self.SETTINGS['PRE_THREAD']['CONTENT'].update({'HEADER' : True})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB') == None:
-                warnings.append('Missing PRE_THREAD : CONTENT : BLURB, using default (true)...')
-                self.SETTINGS['PRE_THREAD']['CONTENT'].update({'BLURB' : True})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES') == None:
-                warnings.append('Missing PRE_THREAD : CONTENT : PROBABLES, using default (true)...')
-                self.SETTINGS['PRE_THREAD']['CONTENT'].update({'PROBABLES' : True})
-
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER') == None:
-                warnings.append('Missing PRE_THREAD : CONTENT : FOOTER, using default ("")...')
-                self.SETTINGS['PRE_THREAD']['CONTENT'].update({'FOOTER' : ""})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TWITTER') == None:
-                warnings.append('Missing PRE_THREAD : TWITTER, using defaults (ENABLED: false, TEXT: "")...')
-                self.SETTINGS['PRE_THREAD'].update({'TWITTER' : {'ENABLED' : False, 'TEXT' : ""}})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('ENABLED') == None:
-                warnings.append('Missing PRE_THREAD : TWITTER : ENABLED, using default (false)...')
-                self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('TEXT') == None:
-                warnings.append('Missing PRE_THREAD : TWITTER : TEXT, using default ("")...')
-                self.SETTINGS['PRE_THREAD']['TWITTER'].update({'TEXT' : ""})
-
-            if self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('CONSOLIDATED_DH_TEXT') == None:
-                warnings.append('Missing PRE_THREAD : TWITTER : CONSOLIDATED_DH_TEXT, using default ("")...')
-                self.SETTINGS['PRE_THREAD']['TWITTER'].update({'CONSOLIDATED_DH_TEXT' : ""})
-
-            if self.SETTINGS.get('GAME_THREAD') == None:
-                warnings.append('Missing GAME_THREAD, using defaults (TITLE: "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", HOURS_BEFORE: 3, SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", MESSAGE: false, HOLD_DH_GAME2_THREAD: true, EXTRA_SLEEP: 0, HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE: false, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, CURRENT_STATE: true, FOOTER: "**Remember to sort by new to keep up!**", UPDATE_STAMP: true, THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true, NEXT_GAME: true, TWITTER:ENABLED: false, TWITTER:TEXT: "")...')
-                self.SETTINGS.update({'GAME_THREAD' : {'TITLE' : 'GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'HOURS_BEFORE' : 3, 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'MESSAGE' : False, 'HOLD_DH_GAME2_THREAD' : True, 'EXTRA_SLEEP' : 0, 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : False, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'CURRENT_STATE' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'UPDATE_STAMP' : True, 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True, 'NEXT_GAME' : True}, 'TWITTER' : {'ENABLED' : False, 'TEXT' : ""}}})
-
-            if self.SETTINGS.get('GAME_THREAD').get('TITLE') == None:
-                warnings.append('Missing GAME_THREAD : TITLE, using default ("GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['GAME_THREAD'].update({'TITLE' : 'GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
-
-            if self.SETTINGS.get('GAME_THREAD').get('HOURS_BEFORE') == None:
-                warnings.append('Missing HOURS_BEFORE, using default (3)...')
-                self.SETTINGS['GAME_THREAD'].update({'HOURS_BEFORE' : 3})
-
-            if self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT') == None:
-                warnings.append('Missing GAME_THREAD : SUGGESTED_SORT, using default ("new" - make sure your bot user has mod rights)...')
-                self.SETTINGS['GAME_THREAD'].update({'SUGGESTED_SORT' : 'new'})
-
-            if self.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES') == None:
-                warnings.append('Missing GAME_THREAD : INBOX_REPLIES, using default (false)...')
-                self.SETTINGS['GAME_THREAD'].update({'INBOX_REPLIES' : False})
-
-            if self.SETTINGS.get('GAME_THREAD').get('FLAIR') == None:
-                warnings.append('Missing GAME_THREAD : FLAIR, using default ("")...')
-                self.SETTINGS['GAME_THREAD'].update({'FLAIR' : ''})
-
-            if self.SETTINGS.get('GAME_THREAD').get('MESSAGE') == None:
-                warnings.append('Missing GAME_THREAD : MESSAGE, using default (false)...')
-                self.SETTINGS['GAME_THREAD'].update({'MESSAGE' : False})
-
-            if self.SETTINGS.get('GAME_THREAD').get('HOLD_DH_GAME2_THREAD') == None:
-                warnings.append('Missing GAME_THREAD : HOLD_DH_GAME2_THREAD, using default (true)...')
-                self.SETTINGS['GAME_THREAD'].update({'HOLD_DH_GAME2_THREAD' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP') == None or not isinstance(self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP'),(int,long)) or self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP') < 0:
-                warnings.append('Missing or invalid GAME_THREAD : EXTRA_SLEEP, using default (0)...')
-                self.SETTINGS['GAME_THREAD'].update({'EXTRA_SLEEP' : 0})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT, using defaults (HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE : false, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "**Remember to sort by new to keep up!**", THEATER_LINK: false, PREVIEW_BLURB: true, PREVIEW_PROBABLES: true)...')
-                self.SETTINGS['GAME_THREAD'].update({'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : False,  'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '**Remember to sort by new to keep up!**', 'THEATER_LINK' : False, 'PREVIEW_BLURB' : True, 'PREVIEW_PROBABLES' : True}})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HEADER') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : HEADER, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'HEADER' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('BOX_SCORE') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : BOX_SCORE, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'BOX_SCORE' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : EXTENDED_BOX_SCORE, using default (false)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'EXTENDED_BOX_SCORE' : False})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('LINE_SCORE') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : LINE_SCORE, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'LINE_SCORE' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : SCORING_PLAYS, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'SCORING_PLAYS' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : HIGHLIGHTS, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'HIGHLIGHTS' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : CURRENT_STATE, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'CURRENT_STATE' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : FOOTER, using default ("**Remember to sort by new to keep up!**")...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'FOOTER' : "**Remember to sort by new to keep up!**"})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : UPDATE_STAMP, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'UPDATE_STAMP' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : THEATER_LINK, using default (false)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'THEATER_LINK' : False})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : PREVIEW_BLURB, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'PREVIEW_BLURB' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : PREVIEW_PROBABLES, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'PREVIEW_PROBABLES' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('NEXT_GAME') == None:
-                warnings.append('Missing GAME_THREAD : CONTENT : NEXT_GAME, using default (true)...')
-                self.SETTINGS['GAME_THREAD']['CONTENT'].update({'NEXT_GAME' : True})
-
-            if self.SETTINGS.get('GAME_THREAD').get('TWITTER') == None:
-                warnings.append('Missing GAME_THREAD : TWITTER, using defaults (ENABLED: false, TEXT: ""...')
-                self.SETTINGS['GAME_THREAD'].update({'TWITTER' : {'ENABLED' : False, 'TEXT' : ""}})
-
-            if self.SETTINGS.get('GAME_THREAD').get('TWITTER').get('ENABLED') == None:
-                warnings.append('Missing GAME_THREAD : TWITTER : ENABLED, using default (false)...')
-                self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False})
-
-            if self.SETTINGS.get('GAME_THREAD').get('TWITTER').get('TEXT') == None:
-                warnings.append('Missing GAME_THREAD : TWITTER : TEXT, using default ("")...')
-                self.SETTINGS['GAME_THREAD']['TWITTER'].update({'TEXT' : ""})
-
-            if self.SETTINGS.get('POST_THREAD') == None:
-                warnings.append('Missing POST_THREAD, using defaults (WIN_TITLE: "WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", LOSS_TITLE: "LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", OTHER_TITLE: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}", SUGGESTED_SORT: "new", INBOX_REPLIES: false, FLAIR: "", HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true, NEXT_GAME: true, TWITTER:ENABLED: false, TWITTER:WIN_TEXT: "", TWITTER:LOSS_TEXT: "", TWITTER:OTHER_TEXT: "")...')
-                self.SETTINGS.update({'POST_THREAD' : {'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'OTHER_TITLE' : 'POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}', 'SUGGESTED_SORT': 'new', 'INBOX_REPLIES': False, 'FLAIR' : '', 'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True, 'NEXT_GAME' : True}, 'TWITTER' : {'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""}}})
-
-            if self.SETTINGS.get('POST_THREAD').get('ENABLED') == None:
-                warnings.append('Missing POST_THREAD : ENABLED, using default (true)...')
-                self.SETTINGS['POST_THREAD'].update({'ENABLED' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('WIN_TITLE') == None:
-                warnings.append('Missing POST_THREAD : WIN_TITLE, using default ("WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['POST_THREAD'].update({'WIN_TITLE' : 'WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
-
-            if self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE') == None:
-                warnings.append('Missing POST_THREAD : LOSS_TITLE, using default ("LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['POST_THREAD'].update({'LOSS_TITLE' : 'LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
-
-            if self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE') == None:
-                warnings.append('Missing POST_THREAD : OTHER_TITLE, using default ("POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")...')
-                self.SETTINGS['POST_THREAD'].update({'OTHER_TITLE' : 'POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}'})
-
-            if self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT') == None:
-                warnings.append('Missing POST_THREAD : SUGGESTED_SORT, using default ("new" - make sure your bot user has mod rights)...')
-                self.SETTINGS['POST_THREAD'].update({'SUGGESTED_SORT' : 'new'})
-
-            if self.SETTINGS.get('POST_THREAD').get('INBOX_REPLIES') == None:
-                warnings.append('Missing POST_THREAD : INBOX_REPLIES, using default (false)...')
-                self.SETTINGS['POST_THREAD'].update({'INBOX_REPLIES' : False})
-
-            if self.SETTINGS.get('POST_THREAD').get('FLAIR') == None:
-                warnings.append('Missing POST_THREAD : FLAIR, using default ("")...')
-                self.SETTINGS['POST_THREAD'].update({'FLAIR' : ''})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT') == None:
-                warnings.append('Missing POST_THREAD : CONTENT, using defaults (HEADER: true, BOX_SCORE: true, EXTENDED_BOX_SCORE: true, LINE_SCORE: true, SCORING_PLAYS: true, HIGHLIGHTS: true, FOOTER: "", THEATER_LINK: true)...')
-                self.SETTINGS['POST_THREAD'].update({'CONTENT' : {'HEADER' : True, 'BOX_SCORE' : True, 'EXTENDED_BOX_SCORE' : True, 'LINE_SCORE' : True, 'SCORING_PLAYS' : True, 'HIGHLIGHTS' : True, 'FOOTER' : '', 'THEATER_LINK' : True}})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HEADER') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : HEADER, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'HEADER' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('BOX_SCORE') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : BOX_SCORE, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'BOX_SCORE' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : EXTENDED_BOX_SCORE, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'EXTENDED_BOX_SCORE' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('LINE_SCORE') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : LINE_SCORE, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'LINE_SCORE' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('SCORING_PLAYS') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : SCORING_PLAYS, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'SCORING_PLAYS' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HIGHLIGHTS') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : HIGHLIGHTS, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'HIGHLIGHTS' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : FOOTER, using default ("")...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'FOOTER' : ""})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('THEATER_LINK') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : THEATER_LINK, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'THEATER_LINK' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('NEXT_GAME') == None:
-                warnings.append('Missing POST_THREAD : CONTENT : NEXT_GAME, using default (true)...')
-                self.SETTINGS['POST_THREAD']['CONTENT'].update({'NEXT_GAME' : True})
-
-            if self.SETTINGS.get('POST_THREAD').get('TWITTER') == None:
-                warnings.append('Missing POST_THREAD : TWITTER, using defaults (ENABLED: false, WIN_TEXT: "", LOSS_TEXT: "", OTHER_TEXT: ""...')
-                self.SETTINGS['POST_THREAD'].update({'TWITTER' : {'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""}})
-
-            if self.SETTINGS.get('POST_THREAD').get('TWITTER').get('ENABLED') == None:
-                warnings.append('Missing POST_THREAD : TWITTER : ENABLED, using default (false)...')
-                self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False})
-
-            if self.SETTINGS.get('POST_THREAD').get('TWITTER').get('WIN_TEXT') == None:
-                warnings.append('Missing POST_THREAD : TWITTER : WIN_TEXT, using default ("")...')
-                self.SETTINGS['POST_THREAD']['TWITTER'].update({'WIN_TEXT' : ""})
-
-            if self.SETTINGS.get('POST_THREAD').get('TWITTER').get('LOSS_TEXT') == None:
-                warnings.append('Missing POST_THREAD : TWITTER : LOSS_TEXT, using default ("")...')
-                self.SETTINGS['POST_THREAD']['TWITTER'].update({'LOSS_TEXT' : ""})
-
-            if self.SETTINGS.get('POST_THREAD').get('TWITTER').get('OTHER_TEXT') == None:
-                warnings.append('Missing POST_THREAD : TWITTER : OTHER_TEXT, using default ("")...')
-                self.SETTINGS['POST_THREAD']['TWITTER'].update({'OTHER_TEXT' : ""})
-
-            if self.SETTINGS.get('TWITTER') == None:
-                warnings.append('Missing TWITTER, disabling Twitter features...')
-                self.SETTINGS.update({'TWITTER':{'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None}})
-                self.SETTINGS['OFF_THREAD'].update({'TWITTER':{'ENABLED' : False, 'TEXT' : ""}})
-                self.SETTINGS['PRE_THREAD'].update({'TWITTER':{'ENABLED' : False, 'TEXT' : ""}})
-                self.SETTINGS['GAME_THREAD'].update({'TWITTER':{'ENABLED' : False, 'TEXT' : ""}})
-                self.SETTINGS['POST_THREAD'].update({'TWITTER':{'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""}})
-            else:
-                if self.SETTINGS.get('TWITTER').get('CONSUMER_KEY') in [None, "XXX"]:
-                    warnings.append('Missing TWITTER : CONSUMER_KEY (or invalid value), disabling Twitter features...')
-                    self.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None})
-                    self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""})
-                if self.SETTINGS.get('TWITTER').get('CONSUMER_SECRET') in [None, "XXX"]:
-                    warnings.append('Missing TWITTER : CONSUMER_SECRET (or invalid value), disabling Twitter features...')
-                    self.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None})
-                    self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""})
-                if self.SETTINGS.get('TWITTER').get('ACCESS_TOKEN') in [None, "XXX"]:
-                    warnings.append('Missing TWITTER : ACCESS_TOKEN (or invalid value), disabling Twitter features...')
-                    self.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None})
-                    self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""})
-                if self.SETTINGS.get('TWITTER').get('ACCESS_SECRET') in [None, "XXX"]:
-                    warnings.append('Missing TWITTER : ACCESS_SECRET (or invalid value), disabling Twitter features...')
-                    self.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None})
-                    self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                    self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""})
-
-            if self.SETTINGS.get('apiURL') == None:
-                self.SETTINGS.update({'apiURL' : 'https://statsapi.mlb.com'})
-
-        return {'fatal' : fatal_errors, 'warnings' : warnings}
+        self.settings_file = settings_file
 
     def run(self):
-
-        settings_results = self.read_settings()
-
-        logger = Logger(self.SETTINGS.get('LOGGING'),self.SETTINGS.get('TEAM_CODE').lower())
-
-        logger.debug("Settings: %s",self.SETTINGS)
-
-        warnings = settings_results.get('warnings',[])
-        fatal_errors = settings_results.get('fatal',[])
-        
-        if (self.SETTINGS['OFF_THREAD']['ENABLED'] and self.SETTINGS['OFF_THREAD']['TWITTER']['ENABLED']) or (self.SETTINGS['PRE_THREAD']['ENABLED'] and self.SETTINGS['PRE_THREAD']['TWITTER']['ENABLED']) or (self.SETTINGS['GAME_THREAD']['TWITTER']['ENABLED']) or (self.SETTINGS['POST_THREAD']['ENABLED'] and self.SETTINGS['POST_THREAD']['TWITTER']['ENABLED']):
-            try:
-                import twitter
-            except:
-                warnings.append('Unable to import python-twitter module. Please ensure it is installed. Disabling Twitter features...')
-                self.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : None, 'CONSUMER_SECRET' : None, 'ACCESS_TOKEN' : None, 'ACCESS_SECRET' : None})
-                self.SETTINGS['OFF_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                self.SETTINGS['PRE_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                self.SETTINGS['GAME_THREAD']['TWITTER'].update({'ENABLED' : False, 'TEXT' : ""})
-                self.SETTINGS['POST_THREAD']['TWITTER'].update({'ENABLED' : False, 'WIN_TEXT' : "", 'LOSS_TEXT' : "", 'OTHER_TEXT' : ""})
-            else:
-                logger.info("Initiating Twitter instance...")
-                twt = twitter.Api(self.SETTINGS.get('TWITTER').get('CONSUMER_KEY'),
-                                       self.SETTINGS.get('TWITTER').get('CONSUMER_SECRET'),
-                                       self.SETTINGS.get('TWITTER').get('ACCESS_TOKEN'),
-                                       self.SETTINGS.get('TWITTER').get('ACCESS_SECRET'))
-                logger.info("Twitter authorized user: %s",twt.VerifyCredentials().screen_name)
-
-        if len(warnings):
-            for warn in warnings:
-                logger.warn(warn)
-
-        if len(fatal_errors):
-            for fatal_err in fatal_errors:
-                logger.critical(fatal_err)
-            return
-
-        edit = editor.Editor(self.SETTINGS)
-
-        while True:
-            myteam = edit.lookup_team_info(field='all',lookupfield='team_code',lookupval=self.SETTINGS.get('TEAM_CODE'))
-            if myteam == -1:
-                time.sleep(10)
-            elif myteam == None or myteam.get('team_code') != self.SETTINGS.get('TEAM_CODE'):
-                logger.critical("Invalid team code detected: %s -- use lookup_team_code.py to look up the correct team code; see README.md",self.SETTINGS.get('TEAM_CODE'))
-                return
-            else: break
-
-        if self.SETTINGS['NOTIFICATIONS']['PROWL']['ENABLED']:
-            logger.info("Setting up Prowl notifications...")
-            import pyprowl
-            prowl = pyprowl.Prowl(self.SETTINGS['NOTIFICATIONS']['PROWL']['API_KEY'], myteam.get('name') + " Reddit Bot")
-            try:
-                verifyKey = prowl.verify_key()
-                logger.info("Successfully validated Prowl API key...")
-            except Exception, e:
-                logger.error("Could not validate Prowl API key, disabling Prowl notifications. Response: %s",e)
-                self.SETTINGS['NOTIFICATIONS']['PROWL'].update({'ENABLED':False})
-
-        timechecker = timecheck.TimeCheck(self.SETTINGS)
-
-        logger.info("Initiating PRAW instance with User Agent: %s",self.SETTINGS.get('FULL_USER_AGENT'))
-        r = praw.Reddit(client_id=self.SETTINGS.get('CLIENT_ID'),
-                        client_secret=self.SETTINGS.get('CLIENT_SECRET'),
-                        refresh_token=self.SETTINGS.get('REFRESH_TOKEN'),
-                        user_agent=self.SETTINGS.get('FULL_USER_AGENT'))
-        scopes = ['identity', 'submit', 'edit', 'read', 'modposts', 'privatemessages', 'flair', 'modflair']
-        praw_scopes = r.auth.scopes()
-        missing_scopes = []
-        logger.info("Reddit authorized scopes: %s",praw_scopes)
-        if 'identity' in praw_scopes:
-            logger.info("Reddit authorized user: %s",r.user.me())
-        for scope in scopes:
-            if scope not in praw_scopes:
-                missing_scopes.append(scope)
-        if len(missing_scopes):
-            logger.warn("%s scope(s) not authorized. Please re-run setup-oauth.py to update scopes for your bot user. See instructions in README.md.",missing_scopes)
+        logger = Logger({'CONSOLE': True, 'CONSOLE_LOG_LEVEL': 'INFO', 'FILE': True, 'FILE_LOG_LEVEL': 'DEBUG'},'startup')
+        conf = Config(self.settings_file)
+        edit = None
+        myteam={}
+        timechecker = None
 
         stale_games = {}
         offday = {}
         threads = {}
         offseason = False
+        UA = None
+        refresh_token = None
+        r = None
 
         while True:
+            if not edit: logger.info("Loading settings from file [%s] and validating, see /logs/startup.log for debug log...",self.settings_file)
+            else:
+                logger.debug("Clearing team info cache...")
+                edit.TEAMINFO.clear() #clear team info cache daily to keep data fresh
+                logger.info("Reloading settings from file [%s] and validating...",self.settings_file)
+            (logger,conf,edit,myteam,timechecker) = self.update_settings(logger,conf,edit,myteam,timechecker)
+            if (conf.SETTINGS['OFF_THREAD']['ENABLED'] and conf.SETTINGS['OFF_THREAD']['TWITTER']['ENABLED']) or (conf.SETTINGS['PRE_THREAD']['ENABLED'] and conf.SETTINGS['PRE_THREAD']['TWITTER']['ENABLED']) or (conf.SETTINGS['GAME_THREAD']['TWITTER']['ENABLED']) or (conf.SETTINGS['POST_THREAD']['ENABLED'] and conf.SETTINGS['POST_THREAD']['TWITTER']['ENABLED']):
+                try:
+                    if 'twitter' not in sys.modules: import twitter
+                except:
+                    logger.error('Unable to import python-twitter module. Please ensure it is installed. Disabling Twitter features...')
+                    conf.SETTINGS['TWITTER'].update({'CONSUMER_KEY' : '', 'CONSUMER_SECRET' : '', 'ACCESS_TOKEN' : '', 'ACCESS_SECRET' : ''})
+                    conf.validate_all(settings=conf.SETTINGS, config={'TWITTER':conf.SETTINGS_CONFIG.get('TWITTER')})
+                else:
+                    logger.info("Initiating Twitter instance...")
+                    twt = twitter.Api(conf.SETTINGS.get('TWITTER').get('CONSUMER_KEY'),
+                                           conf.SETTINGS.get('TWITTER').get('CONSUMER_SECRET'),
+                                           conf.SETTINGS.get('TWITTER').get('ACCESS_TOKEN'),
+                                           conf.SETTINGS.get('TWITTER').get('ACCESS_SECRET'))
+                    logger.info("Twitter authorized user: %s",twt.VerifyCredentials().screen_name)
+
+            if conf.SETTINGS['NOTIFICATIONS']['PROWL']['ENABLED']:
+                logger.info("Setting up Prowl notifications...")
+                if 'pyprowl' not in sys.modules: import pyprowl
+                prowl = pyprowl.Prowl(conf.SETTINGS['NOTIFICATIONS']['PROWL']['API_KEY'], myteam.get('name') + " Reddit Bot")
+                try:
+                    verifyKey = prowl.verify_key()
+                    logger.info("Successfully validated Prowl API key...")
+                except Exception, e:
+                    logger.error("Could not validate Prowl API key, disabling Prowl notifications. Response: %s",e)
+                    conf.SETTINGS['NOTIFICATIONS']['PROWL'].update({'ENABLED':False})
+
+            if not r or refresh_token != conf.SETTINGS.get('REFRESH_TOKEN') or UA != 'OAuth Baseball Game Thread Bot for Reddit v' + self.VERSION + ' https://github.com/toddrob99/Baseball-GDT-Bot ' + conf.SETTINGS.get('USER_AGENT'):
+                UA = 'OAuth Baseball Game Thread Bot for Reddit v' + self.VERSION + ' https://github.com/toddrob99/Baseball-GDT-Bot ' + conf.SETTINGS.get('USER_AGENT')
+                refresh_token=conf.SETTINGS.get('REFRESH_TOKEN')
+                logger.debug("Initiating PRAW instance with User Agent: %s",UA)
+                r = praw.Reddit(client_id=conf.SETTINGS.get('CLIENT_ID'),
+                                client_secret=conf.SETTINGS.get('CLIENT_SECRET'),
+                                refresh_token=conf.SETTINGS.get('REFRESH_TOKEN'),
+                                user_agent=UA)
+                scopes = ['identity', 'submit', 'edit', 'read', 'modposts', 'privatemessages', 'flair', 'modflair']
+                praw_scopes = r.auth.scopes()
+                missing_scopes = []
+                logger.debug("Reddit authorized scopes: %s",praw_scopes)
+                if 'identity' in praw_scopes:
+                    logger.info("Reddit authorized user: %s",r.user.me())
+                for scope in scopes:
+                    if scope not in praw_scopes:
+                        missing_scopes.append(scope)
+                if len(missing_scopes):
+                    logger.warn("%s scope(s) not authorized. Please re-run setup-oauth.py to update scopes for your bot user. See instructions in README.md.",missing_scopes)
+
             if len(offday):
                 logger.info("Marking yesterday's offday thread as stale...")
                 stale_games[0] = offday
@@ -596,31 +117,31 @@ class Bot:
                 if len(self.games)>0:
                     logger.info("Marking yesterday's threads as stale...")
                     stale_games = self.games.copy()
-            if self.SETTINGS.get('STICKY') and len(stale_games)==0:
+            if conf.SETTINGS.get('STICKY') and len(stale_games)==0:
                 dateformats = []
-                if self.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('OFF_THREAD').get('TITLE')[self.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:')+6:self.SETTINGS.get('OFF_THREAD').get('TITLE').find('}',self.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:'))])
-                if self.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('PRE_THREAD').get('TITLE')[self.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:')+6:self.SETTINGS.get('PRE_THREAD').get('TITLE').find('}',self.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:'))])
-                if self.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('GAME_THREAD').get('TITLE')[self.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:')+6:self.SETTINGS.get('GAME_THREAD').get('TITLE').find('}',self.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:'))])
-                if self.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('POST_THREAD').get('WIN_TITLE')[self.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:')+6:self.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('}',self.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:'))])
-                if self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')[self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:')+6:self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('}',self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:'))])
-                if self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:') > -1:
-                    dateformats.append(self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE')[self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:')+6:self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('}',self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:'))])
+                if conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('OFF_THREAD').get('TITLE')[conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:')+6:conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('}',conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:'))])
+                if conf.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('PRE_THREAD').get('TITLE')[conf.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:')+6:conf.SETTINGS.get('PRE_THREAD').get('TITLE').find('}',conf.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:'))])
+                if conf.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('GAME_THREAD').get('TITLE')[conf.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:')+6:conf.SETTINGS.get('GAME_THREAD').get('TITLE').find('}',conf.SETTINGS.get('GAME_THREAD').get('TITLE').find('{date:'))])
+                if conf.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('POST_THREAD').get('WIN_TITLE')[conf.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:')+6:conf.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('}',conf.SETTINGS.get('POST_THREAD').get('WIN_TITLE').find('{date:'))])
+                if conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')[conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:')+6:conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('}',conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:'))])
+                if conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE')[conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:')+6:conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('}',conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:'))])
                 if len(dateformats)==0: dateformats = ["%B %d, %Y"]
                 dateformats = list(set(dateformats))
                 datestocheck = []
                 for f in dateformats:
                     datestocheck.append(datetime.strftime(datetime.now(),f.replace('%I:%M %p','').replace('%I:%M%p','').replace('%I:%M','').replace(' @ ','').replace('  ',' ')).rstrip())
                 try:
-                    sticky1 = r.subreddit(self.SETTINGS.get('SUBREDDIT')).sticky(1)
+                    sticky1 = r.subreddit(conf.SETTINGS.get('SUBREDDIT')).sticky(1)
                     if sticky1.author == r.user.me() and not any(f in sticky1.title for f in datestocheck):
                         stale_games[len(stale_games)] = {'gamesub' : sticky1, 'gametitle' : sticky1.title}
                         logger.warn("Found stale thread in top sticky slot (%s)...",sticky1.title)
-                    sticky2 = r.subreddit(self.SETTINGS.get('SUBREDDIT')).sticky(2)
+                    sticky2 = r.subreddit(conf.SETTINGS.get('SUBREDDIT')).sticky(2)
                     if sticky2.author == r.user.me() and not any(f in sticky2.title for f in datestocheck):
                         stale_games[len(stale_games)] = {'gamesub' : sticky2, 'gametitle' : sticky2.title}
                         logger.warn("Found stale thread in bottom sticky slot (%s)...",sticky2.title)
@@ -633,8 +154,6 @@ class Bot:
 
             logger.debug("Clearing api cache...")
             edit.gamesLive.clear() #clear api cache daily to keep memory usage down
-            logger.debug("Clearing team info cache...")
-            edit.TEAMINFO.clear() #clear team info cache daily to keep data fresh
             logger.debug("Clearing daily game thread edit stats...")
             self.editStats.clear() #clear edit timestamps daily to keep memory usage down
 
@@ -717,25 +236,25 @@ class Bot:
                     logger.info("No games today...")
                     offseason = False
 
-            if self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0 and not (offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON')):
-                timechecker.pregamecheck(self.SETTINGS.get('OFF_THREAD').get('TIME'))
-                offday.update({'offtitle': edit.generate_title(0,"off"), 'offmessage' : self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+            if conf.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0 and not (offseason and conf.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON')):
+                timechecker.pregamecheck(conf.SETTINGS.get('OFF_THREAD').get('TIME'))
+                offday.update({'offtitle': edit.generate_title(0,"off"), 'offmessage' : conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 if next_game.get('date'): 
                     nex = edit.generate_next_game(next_game=next_game)
-                    if len(self.SETTINGS.get('OFF_THREAD').get('FOOTER')): nex += "\n\n"
-                    offday.update({'offmessage' : nex + self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+                    if len(conf.SETTINGS.get('OFF_THREAD').get('FOOTER')): nex += "\n\n"
+                    offday.update({'offmessage' : nex + conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 else: 
-                    if len(self.SETTINGS.get('OFF_THREAD').get('FOOTER')) == 0:
+                    if len(conf.SETTINGS.get('OFF_THREAD').get('FOOTER')) == 0:
                         logger.warn("No date found for next game, and off day footer text is blank. Using default footer text since post cannot be blank...")
                         offday.update({'offmessage' : "No game today. Feel free to discuss whatever you want in this thread."})
-                    else: offday.update({'offmessage' : self.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+                    else: offday.update({'offmessage' : conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
                 try:
-                    subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
+                    subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
                     for submission in subreddit.new():
                         if submission.title == offday.get('offtitle'):
                             logger.info("Offday thread already posted, getting submission...")
                             offday.update({'offsub' : submission})
-                            if self.SETTINGS.get('STICKY'):
+                            if conf.SETTINGS.get('STICKY'):
                                 logger.info("Stickying submission...")
                                 try:
                                     offday.get('offsub').mod.sticky()
@@ -746,7 +265,7 @@ class Bot:
                             break
 
                     if not offday.get('offsub'):
-                        if self.SETTINGS.get('STICKY') and len(stale_games):
+                        if conf.SETTINGS.get('STICKY') and len(stale_games):
                             logger.info("Unstickying stale threads...")
                             try:
                                 for stale_k,stale_game in stale_games.items():
@@ -763,10 +282,10 @@ class Bot:
                             stale_games.clear()
 
                         logger.info("Submitting offday thread...")
-                        offday.update({'offsub' : subreddit.submit(offday.get('offtitle'), selftext=offday.get('offmessage'), send_replies=self.SETTINGS.get('OFF_THREAD').get('INBOX_REPLIES'))})
+                        offday.update({'offsub' : subreddit.submit(offday.get('offtitle'), selftext=offday.get('offmessage'), send_replies=conf.SETTINGS.get('OFF_THREAD').get('INBOX_REPLIES'))})
                         logger.info("Offday thread submitted...")
 
-                        if self.SETTINGS.get('STICKY'):
+                        if conf.SETTINGS.get('STICKY'):
                             logger.info("Stickying submission...")
                             try:
                                 offday.get('offsub').mod.sticky()
@@ -774,49 +293,52 @@ class Bot:
                             except:
                                 logger.error("Sticky of offday thread failed (check mod privileges), continuing...")
 
-                        if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
-                            if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == "":
+                        if conf.SETTINGS.get('FLAIR_MODE') == 'submitter':
+                            if conf.SETTINGS.get('OFF_THREAD').get('FLAIR') == "":
                                 logger.error("FLAIR_MODE = submitter, but OFF_THREAD : FLAIR is blank...")
                             else:
                                 logger.info("Adding flair to submission as submitter...")
                                 choices = offday.get('offsub').flair.choices()
                                 flairsuccess = False
                                 for p in choices:
-                                    if p['flair_text'] == self.SETTINGS.get('OFF_THREAD').get('FLAIR'):
+                                    if p['flair_text'] == conf.SETTINGS.get('OFF_THREAD').get('FLAIR'):
                                         offday.get('offsub').flair.select(p['flair_template_id'])
                                         flairsuccess = True
                                 if flairsuccess:
                                     logger.info("Submission flaired...")
                                 else: 
                                     logger.error("Flair not set: could not find flair in available choices")
-                        elif self.SETTINGS.get('FLAIR_MODE') == 'mod':
-                            if self.SETTINGS.get('OFF_THREAD').get('FLAIR') == "":
+                        elif conf.SETTINGS.get('FLAIR_MODE') == 'mod':
+                            if conf.SETTINGS.get('OFF_THREAD').get('FLAIR') == "":
                                 logger.error("FLAIR_MODE = mod, but OFF_THREAD : FLAIR is blank...")
                             else:
                                 logger.info("Adding flair to submission as mod...")
-                                offday.get('offsub').mod.flair(self.SETTINGS.get('OFF_THREAD').get('FLAIR'))
-                                logger.info("Submission flaired...")
+                                try:
+                                    offday.get('offsub').mod.flair(conf.SETTINGS.get('OFF_THREAD').get('FLAIR'))
+                                    logger.info("Submission flaired...")
+                                except:
+                                    logger.error("Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing...")
 
-                        if self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') != "":
-                            logger.info("Setting suggested sort to %s...",self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
+                        if conf.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT') != "":
+                            logger.info("Setting suggested sort to %s...",conf.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
                             try:
-                                offday.get('offsub').mod.suggested_sort(self.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
+                                offday.get('offsub').mod.suggested_sort(conf.SETTINGS.get('OFF_THREAD').get('SUGGESTED_SORT'))
                                 logger.info("Suggested sort set...")
                             except:
                                 logger.error("Setting suggested sort on offday thread failed (check mod privileges), continuing...")
 
-                        if self.SETTINGS.get('OFF_THREAD').get('TWITTER').get('ENABLED'):
+                        if conf.SETTINGS.get('OFF_THREAD').get('TWITTER').get('ENABLED'):
                             logger.info("Preparing to tweet link to off day thread...")
-                            tweetText = edit.replace_params(self.SETTINGS.get('OFF_THREAD').get('TWITTER').get('TEXT').replace('{link}',offday.get('offsub').shortlink), 'off', 'tweet')
+                            tweetText = edit.replace_params(conf.SETTINGS.get('OFF_THREAD').get('TWITTER').get('TEXT').replace('{link}',offday.get('offsub').shortlink), 'off', 'tweet')
                             twt.PostUpdate(tweetText)
                             logger.info("Tweet submitted...")
 
-                        if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('OFF_THREAD_SUBMITTED'):
+                        if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('OFF_THREAD_SUBMITTED'):
                             logger.info("Sending Prowl notification...")
                             event = myteam.get('name') + ' Off Day Thread Posted'
-                            description = myteam.get('name') + ' off day thread was posted to r/'+self.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+'.\nThread title: '+offday.get('offtitle')+'\nURL: '+offday.get('offsub').shortlink
+                            description = myteam.get('name') + ' off day thread was posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+'.\nThread title: '+offday.get('offtitle')+'\nURL: '+offday.get('offsub').shortlink
                             try:
-                                prowlResult = prowl.notify(event, description, self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), offday.get('offsub').shortlink)
+                                prowlResult = prowl.notify(event, description, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), offday.get('offsub').shortlink)
                                 logger.info("Successfully sent notification to Prowl...")
                             except Exception, e:
                                 logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, description, e)
@@ -824,13 +346,13 @@ class Bot:
                         logger.info("Finished posting offday thread, going into end of day loop...")
                 except Exception, err:
                     logger.info("Error posting off day thread, going into end of day loop: %s",err)
-            elif not self.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0:
+            elif not conf.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0:
                 logger.info("Off day detected, but off day thread disabled. Going into end of day loop...")
-            elif offseason and self.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON') and len(self.games) == 0:
+            elif offseason and conf.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON') and len(self.games) == 0:
                 logger.info("Suppressing off day thread during off season, going into end of day loop...")
 
-            if self.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(self.games) > 0:
-                timechecker.pregamecheck(self.SETTINGS.get('PRE_THREAD').get('TIME'))
+            if conf.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(self.games) > 0:
+                timechecker.pregamecheck(conf.SETTINGS.get('PRE_THREAD').get('TIME'))
                 for k,game in self.games.items():
                     logger.info("Retrieving updated game info for Game %s...",k)
                     game.update({'gameInfo' : edit.get_teams_time(pk=game.get('gamePk'),d=today.date())})
@@ -839,8 +361,8 @@ class Bot:
                     game.update({'pretitle': edit.generate_title(k,"pre")})
                     while True:
                         try:
-                            subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
-                            if self.SETTINGS.get('STICKY') and len(stale_games):
+                            subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
+                            if conf.SETTINGS.get('STICKY') and len(stale_games):
                                 logger.info("Unstickying stale threads...")
                                 try:
                                     for stale_k,stale_game in stale_games.items():
@@ -855,7 +377,7 @@ class Bot:
                                 except Exception, err:
                                     logger.error("Unsticky of stale posts failed, continuing...")
                                 stale_games.clear()
-                            if self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') and game.get('doubleheader'):
+                            if conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') and game.get('doubleheader'):
                                 if game.get('presub'):
                                     logger.info("Consolidated pregame thread already posted and linked to this game...")
                                     break
@@ -871,7 +393,7 @@ class Bot:
                             for submission in subreddit.new():
                                 if submission.title in [game.get('pretitle'), original_pretitle]:
                                     if submission.title == original_pretitle: game.update({'pretitle' : original_pretitle})
-                                    if game.get('doubleheader') and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
+                                    if game.get('doubleheader') and conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                                         logger.info("Game %s consolidated doubleheader pregame thread already posted, submitting edits...",k)
                                         game.update({'presub' : submission})
                                         game.get('presub').edit(edit.generate_thread_code('pre',k,game.get('othergame')))
@@ -882,7 +404,7 @@ class Bot:
                                         game.update({'presub' : submission})
                                         game.get('presub').edit(edit.generate_thread_code('pre',k))
                                         logger.info("Edits submitted. Sleeping for 5 seconds...")
-                                        if self.SETTINGS.get('STICKY'):
+                                        if conf.SETTINGS.get('STICKY'):
                                             logger.info("Stickying submission...")
                                             try:
                                                 game.get('presub').mod.sticky()
@@ -892,17 +414,17 @@ class Bot:
                                     time.sleep(5)
                                     break
                             if not game.get('presub'):
-                                if self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES')>=0:
+                                if conf.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES')>=0:
                                     time_to_post = timechecker.gamecheck(k,just_get_time=True)
                                     minutes_until_post_time = int((time_to_post-edit.convert_tz(datetime.utcnow(),'bot')).total_seconds() / 60)
                                     logger.debug("Minutes until game thread post time: %s",minutes_until_post_time)
-                                    if minutes_until_post_time <= self.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES'):
+                                    if minutes_until_post_time <= conf.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES'):
                                         logger.info("Suppressing pregame thread for Game %s because game thread will be posted soon...",k)
                                         break
                                 logger.info("Submitting pregame thread for Game %s...",k)
-                                game.update({'presub' : subreddit.submit(game.get('pretitle'), selftext=edit.generate_thread_code('pre',k,game.get('othergame')), send_replies=self.SETTINGS.get('PRE_THREAD').get('INBOX_REPLIES'))})
+                                game.update({'presub' : subreddit.submit(game.get('pretitle'), selftext=edit.generate_thread_code('pre',k,game.get('othergame')), send_replies=conf.SETTINGS.get('PRE_THREAD').get('INBOX_REPLIES'))})
                                 logger.info("Pregame thread submitted...")
-                                if self.SETTINGS.get('STICKY'):
+                                if conf.SETTINGS.get('STICKY'):
                                     logger.info("Stickying submission...")
                                     try:
                                         game.get('presub').mod.sticky()
@@ -910,60 +432,63 @@ class Bot:
                                     except:
                                         logger.error("Sticky of pregame thread failed (check mod privileges), continuing...")
 
-                                if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
-                                    if self.SETTINGS.get('PRE_THREAD').get('FLAIR') == "":
+                                if conf.SETTINGS.get('FLAIR_MODE') == 'submitter':
+                                    if conf.SETTINGS.get('PRE_THREAD').get('FLAIR') == "":
                                         logger.error("FLAIR_MODE = submitter, but PRE_THREAD : FLAIR is blank...")
                                     else:
                                         logger.info("Adding flair to submission as submitter...")
                                         choices = game.get('presub').flair.choices()
                                         flairsuccess = False
                                         for p in choices:
-                                            if p['flair_text'] == self.SETTINGS.get('PRE_THREAD').get('FLAIR'):
+                                            if p['flair_text'] == conf.SETTINGS.get('PRE_THREAD').get('FLAIR'):
                                                 game.get('presub').flair.select(p['flair_template_id'])
                                                 flairsuccess = True
                                         if flairsuccess:
                                             logger.info("Submission flaired...")
                                         else:
                                             logger.error("Flair not set: could not find flair in available choices")
-                                elif self.SETTINGS.get('FLAIR_MODE') == 'mod':
-                                    if self.SETTINGS.get('PRE_THREAD').get('FLAIR') == "":
+                                elif conf.SETTINGS.get('FLAIR_MODE') == 'mod':
+                                    if conf.SETTINGS.get('PRE_THREAD').get('FLAIR') == "":
                                         logger.error("FLAIR_MODE = mod, but PRE_THREAD : FLAIR is blank...")
                                     else:
                                         logger.info("Adding flair to submission as mod...")
-                                        game.get('presub').mod.flair(self.SETTINGS.get('PRE_THREAD').get('FLAIR'))
-                                        logger.info("Submission flaired...")
+                                        try:
+                                            game.get('presub').mod.flair(conf.SETTINGS.get('PRE_THREAD').get('FLAIR'))
+                                            logger.info("Submission flaired...")
+                                        except:
+                                            logger.error("Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing...")
 
-                                if self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') != "":
-                                    logger.info("Setting suggested sort to %s...", self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
+                                if conf.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT') != "":
+                                    logger.info("Setting suggested sort to %s...", conf.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
                                     try:
-                                        game.get('presub').mod.suggested_sort(self.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
+                                        game.get('presub').mod.suggested_sort(conf.SETTINGS.get('PRE_THREAD').get('SUGGESTED_SORT'))
                                         logger.info("Suggested sort set...")
                                     except:
                                         logger.error("Setting suggested sort on pregame thread failed (check mod privileges), continuing...")
 
-                                if self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('ENABLED'):
+                                if conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('ENABLED'):
                                     logger.info("Preparing to tweet link to pregame thread...")
-                                    if game.get('doubleheader') and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
-                                        tweetText = edit.replace_params(self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('CONSOLIDATED_DH_TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
-                                    else: tweetText = edit.replace_params(self.SETTINGS.get('PRE_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
+                                    if game.get('doubleheader') and conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
+                                        tweetText = edit.replace_params(conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('CONSOLIDATED_DH_TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
+                                    else: tweetText = edit.replace_params(conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
                                     twt.PostUpdate(tweetText)
                                     logger.info("Tweet submitted...")
 
-                                if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('PRE_THREAD_SUBMITTED'):
+                                if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('PRE_THREAD_SUBMITTED'):
                                     logger.info("Sending Prowl notification...")
                                     if game.get('homeaway') == 'home':
                                         vsat = 'vs. ' + game.get('gameInfo').get('away').get('team_name')
                                     else:
                                         vsat = '@ ' + game.get('gameInfo').get('home').get('team_name')
                                     event = myteam.get('name') + ' Pregame Thread Posted'
-                                    if game.get('doubleheader') and not self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'): event += ' - DH Game ' + str(game.get('gameNumber'))
-                                    description = 'Pregame thread posted to r/'+self.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
+                                    if game.get('doubleheader') and not conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'): event += ' - DH Game ' + str(game.get('gameNumber'))
+                                    description = 'Pregame thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
                                                     myteam.get('name')+' '+vsat+'\n' +\
                                                     'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                     'Thread title: '+game.get('pretitle')+'\n' +\
                                                     'URL: '+game.get('presub').shortlink
                                     try:
-                                        prowlResult = prowl.notify(event, description, self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('presub').shortlink)
+                                        prowlResult = prowl.notify(event, description, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('presub').shortlink)
                                         logger.info("Successfully sent notification to Prowl...")
                                     except Exception, e:
                                         logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, description, e)
@@ -971,7 +496,7 @@ class Bot:
                                 logger.info("Sleeping for 5 seconds...")
                                 time.sleep(5)
 
-                            if self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') and game.get('doubleheader'):
+                            if conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') and game.get('doubleheader'):
                                 if self.games[game.get('othergame')].get('doubleheader'):
                                     logger.info("Linking pregame submission to doubleheader Game %s...",game.get('othergame'))
                                     self.games[game.get('othergame')].update({'presub' : game.get('presub')})
@@ -981,7 +506,7 @@ class Bot:
                             time.sleep(30)
                 logger.info("Finished posting pregame threads...")
                 logger.debug("self.games: %s",self.games)
-            elif not self.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(self.games):
+            elif not conf.SETTINGS.get('PRE_THREAD').get('ENABLED') and len(self.games):
                 logger.info("Pregame thread disabled...")
 
             while len(self.games) > 0:
@@ -996,8 +521,8 @@ class Bot:
                         if not game.get('final'):
                             check = edit.convert_tz(datetime.utcnow(),'bot')
                             try:
-                                subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
-                                if self.SETTINGS.get('STICKY'):
+                                subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
+                                if conf.SETTINGS.get('STICKY'):
                                     if len(stale_games):
                                         logger.info("Unstickying stale threads...")
                                         try:
@@ -1032,7 +557,7 @@ class Bot:
                                             threads[k].update({'game' : submission.selftext})
                                             break
                                     if game.get('gamesub'):
-                                        if self.SETTINGS.get('STICKY'):
+                                        if conf.SETTINGS.get('STICKY'):
                                             logger.info("Stickying submission...")
                                             try:
                                                 game.get('gamesub').mod.sticky()
@@ -1042,14 +567,14 @@ class Bot:
                                 if not game.get('gamesub') and not game.get('skipflag'):
                                     logger.info("Submitting game thread for Game %s...",k)
                                     threads[k].update({'game' : edit.generate_thread_code("game",k)})
-                                    if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): 
+                                    if conf.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): 
                                         lastupdate = "^^^Last ^^^Updated: ^^^" + edit.convert_tz(datetime.utcnow(),'bot').strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                                     else: lastupdate = ""
                                     threadtext = threads[k].get('game') + lastupdate
-                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=threadtext, send_replies=self.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES')), 'status' : edit.get_status(k)})
+                                    game.update({'gamesub' : subreddit.submit(game.get('gametitle'), selftext=threadtext, send_replies=conf.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES')), 'status' : edit.get_status(k)})
                                     logger.info("Game thread submitted...")
 
-                                    if self.SETTINGS.get('STICKY'):
+                                    if conf.SETTINGS.get('STICKY'):
                                         logger.info("Stickying submission...")
                                         try:
                                             game.get('gamesub').mod.sticky()
@@ -1057,49 +582,52 @@ class Bot:
                                         except:
                                             logger.error("Sticky of game thread failed (check mod privileges), continuing...")
 
-                                    if self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT') != "":
-                                        logger.info("Setting suggested sort to %s...", self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
+                                    if conf.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT') != "":
+                                        logger.info("Setting suggested sort to %s...", conf.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
                                         try:
-                                            game.get('gamesub').mod.suggested_sort(self.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
+                                            game.get('gamesub').mod.suggested_sort(conf.SETTINGS.get('GAME_THREAD').get('SUGGESTED_SORT'))
                                             logger.info("Suggested sort set...")
                                         except:
                                             logger.error("Setting suggested sort on game thread failed (check mod privileges), continuing...")
 
-                                    if self.SETTINGS.get('GAME_THREAD').get('MESSAGE'):
+                                    if conf.SETTINGS.get('GAME_THREAD').get('MESSAGE'):
                                         logger.info("Messaging Baseballbot...")
                                         r.redditor('baseballbot').message('Gamethread posted', game.get('gamesub').shortlink)
                                         logger.info("Baseballbot messaged...")
 
-                                    if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
-                                        if self.SETTINGS.get('GAME_THREAD').get('FLAIR') == "":
+                                    if conf.SETTINGS.get('FLAIR_MODE') == 'submitter':
+                                        if conf.SETTINGS.get('GAME_THREAD').get('FLAIR') == "":
                                             logger.error("FLAIR_MODE = submitter, but GAME_THREAD : FLAIR is blank...")
                                         else:
                                             logger.info("Adding flair to submission as submitter...")
                                             choices = game.get('gamesub').flair.choices()
                                             flairsuccess = False
                                             for p in choices:
-                                                if p['flair_text'] == self.SETTINGS.get('GAME_THREAD').get('FLAIR'):
+                                                if p['flair_text'] == conf.SETTINGS.get('GAME_THREAD').get('FLAIR'):
                                                     game.get('gamesub').flair.select(p['flair_template_id'])
                                                     flairsuccess = True
                                             if flairsuccess:
                                                 logger.info("Submission flaired...")
                                             else:
                                                 logger.error("Flair not set: could not find flair in available choices")
-                                    elif self.SETTINGS.get('FLAIR_MODE') == 'mod':
-                                        if self.SETTINGS.get('GAME_THREAD').get('FLAIR') == "":
+                                    elif conf.SETTINGS.get('FLAIR_MODE') == 'mod':
+                                        if conf.SETTINGS.get('GAME_THREAD').get('FLAIR') == "":
                                             logger.error("FLAIR_MODE = mod, but GAME_THREAD : FLAIR is blank...")
                                         else:
                                             logger.info("Adding flair to submission as mod...")
-                                            game.get('gamesub').mod.flair(self.SETTINGS.get('GAME_THREAD').get('FLAIR'))
-                                            logger.info("Submission flaired...")
+                                            try:
+                                                game.get('gamesub').mod.flair(conf.SETTINGS.get('GAME_THREAD').get('FLAIR'))
+                                                logger.info("Submission flaired...")
+                                            except:
+                                                logger.error("Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing...")
 
-                                    if self.SETTINGS.get('GAME_THREAD').get('TWITTER').get('ENABLED'):
+                                    if conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('ENABLED'):
                                         logger.info("Preparing to tweet link to game thread...")
-                                        tweetText = edit.replace_params(self.SETTINGS.get('GAME_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('gamesub').shortlink), 'game', 'tweet', k)
+                                        tweetText = edit.replace_params(conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('gamesub').shortlink), 'game', 'tweet', k)
                                         twt.PostUpdate(tweetText)
                                         logger.info("Tweet submitted...")
 
-                                    if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('GAME_THREAD_SUBMITTED'):
+                                    if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('GAME_THREAD_SUBMITTED'):
                                         logger.info("Sending Prowl notification...")
                                         if game.get('homeaway') == 'home':
                                             vsat = 'vs. ' + game.get('gameInfo').get('away').get('team_name')
@@ -1107,19 +635,19 @@ class Bot:
                                             vsat = '@ ' + game.get('gameInfo').get('home').get('team_name')
                                         event = myteam.get('name') + ' Game Thread Posted'
                                         if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
-                                        description = 'Game thread posted to r/'+self.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
+                                        description = 'Game thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
                                                         myteam.get('name')+' '+vsat+'\n' +\
                                                         'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                         'Thread title: '+game.get('gametitle')+'\n' +\
                                                         'URL: '+game.get('gamesub').shortlink
                                         try:
-                                            prowlResult = prowl.notify(event, description, self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('gamesub').shortlink)
+                                            prowlResult = prowl.notify(event, description, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('gamesub').shortlink)
                                             logger.info("Successfully sent notification to Prowl...")
                                         except Exception, e:
                                             logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, description, e)
 
                                     game.update({'skipflag':True})
-                                    sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
+                                    sleeptime = 5 + conf.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                     logger.info("Sleeping for %s seconds...",sleeptime)
                                     time.sleep(sleeptime)
                             except Exception, err:
@@ -1138,9 +666,9 @@ class Bot:
                                         logger.info("Editing thread for Game %s...",k)
                                         while True:
                                             try:
-                                                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): threadstr += "^^^Last ^^^Updated: ^^^" + edit.convert_tz(datetime.utcnow(),'bot').strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
+                                                if conf.SETTINGS.get('GAME_THREAD').get('CONTENT').get('UPDATE_STAMP'): threadstr += "^^^Last ^^^Updated: ^^^" + edit.convert_tz(datetime.utcnow(),'bot').strftime("%m/%d/%Y ^^^%I:%M:%S ^^^%p ^^^%Z")
                                                 game.get('gamesub').edit(threadstr)
-                                                sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
+                                                sleeptime = 5 + conf.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                                 logger.info("Game %s edits submitted. Sleeping for %s seconds...",k,sleeptime)
                                                 self.editStats[k]['edited'].append({'stamp':datetime.today().strftime('%Y-%m-%d %H:%M:%S'), 'abstractGameState':game.get('status').get('abstractGameState'), 'detailedState':game.get('status').get('detailedState')})
                                                 time.sleep(sleeptime)
@@ -1149,7 +677,7 @@ class Bot:
                                                 logger.error("Couldn't submit edits, retrying in 10 seconds...")
                                                 time.sleep(10)
                                     else:
-                                        sleeptime = 5 + self.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
+                                        sleeptime = 5 + conf.SETTINGS.get('GAME_THREAD').get('EXTRA_SLEEP')
                                         logger.info("No changes to Game %s thread. Sleeping for %s seconds...",k,sleeptime)
                                         time.sleep(sleeptime)
                                     if (game.get('status').get('abstractGameState') == 'Final' or game.get('status').get('detailedState').startswith("Suspended")) and not (statusCheck.get('abstractGameState') == 'Final' or statusCheck.get('detailedState').startswith("Suspended")):
@@ -1163,12 +691,12 @@ class Bot:
                                 check = edit.convert_tz(datetime.utcnow(),'bot')
                                 game.update({'final' : True})
                                 logger.info("Game %s Status: %s / %s",k,game.get('status').get('abstractGameState'),game.get('status').get('detailedState'))
-                                if self.SETTINGS.get('POST_THREAD').get('ENABLED'):
+                                if conf.SETTINGS.get('POST_THREAD').get('ENABLED'):
                                     try:
                                         myteamwon = edit.didmyteamwin(k)
                                         game.update({'posttitle' : edit.generate_title(k,"post",False,myteamwon)})
-                                        subreddit = r.subreddit(self.SETTINGS.get('SUBREDDIT'))
-                                        if self.SETTINGS.get('STICKY'):
+                                        subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
+                                        if conf.SETTINGS.get('STICKY'):
                                             if game.get('presub'):
                                                 logger.info("Unstickying Game %s pregame thread...",k)
                                                 try:
@@ -1186,7 +714,7 @@ class Bot:
                                                 if submission.title == game.get('posttitle'):
                                                     logger.info("Game %s postgame thread already posted, getting submission...",k)
                                                     game.update({'postsub' : submission})
-                                                    if self.SETTINGS.get('STICKY'):
+                                                    if conf.SETTINGS.get('STICKY'):
                                                         logger.info("Stickying submission...")
                                                         try:
                                                             game.get('postsub').mod.sticky()
@@ -1196,10 +724,10 @@ class Bot:
                                                     break
                                         if not game.get('postsub'):
                                             logger.info("Submitting postgame thread for Game %s...",k)
-                                            game.update({'postsub' : subreddit.submit(game.get('posttitle'), selftext=edit.generate_thread_code("post",k), send_replies=self.SETTINGS.get('POST_THREAD').get('INBOX_REPLIES'))})
+                                            game.update({'postsub' : subreddit.submit(game.get('posttitle'), selftext=edit.generate_thread_code("post",k), send_replies=conf.SETTINGS.get('POST_THREAD').get('INBOX_REPLIES'))})
                                             logger.info("Postgame thread submitted...")
 
-                                            if self.SETTINGS.get('STICKY'):
+                                            if conf.SETTINGS.get('STICKY'):
                                                 logger.info("Stickying submission...")
                                                 try:
                                                     game.get('postsub').mod.sticky()
@@ -1207,47 +735,50 @@ class Bot:
                                                 except:
                                                     logger.error("Sticky of postgame thread failed (check mod privileges), continuing...")
 
-                                            if self.SETTINGS.get('FLAIR_MODE') == 'submitter':
-                                                if self.SETTINGS.get('POST_THREAD').get('FLAIR') == "":
+                                            if conf.SETTINGS.get('FLAIR_MODE') == 'submitter':
+                                                if conf.SETTINGS.get('POST_THREAD').get('FLAIR') == "":
                                                     logger.error("FLAIR_MODE = submitter, but POST_THREAD : FLAIR is blank...")
                                                 else:
                                                     logger.info("Adding flair to submission as submitter...")
                                                     choices = game.get('postsub').flair.choices()
                                                     flairsuccess = False
                                                     for p in choices:
-                                                        if p['flair_text'] == self.SETTINGS.get('POST_THREAD').get('FLAIR'):
+                                                        if p['flair_text'] == conf.SETTINGS.get('POST_THREAD').get('FLAIR'):
                                                             game.get('postsub').flair.select(p['flair_template_id'])
                                                             flairsuccess = True
                                                     if flairsuccess:
                                                         logger.info("Submission flaired...")
                                                     else:
                                                         logger.error("Flair not set: could not find flair in available choices")
-                                            elif self.SETTINGS.get('FLAIR_MODE') == 'mod':
-                                                if self.SETTINGS.get('POST_THREAD').get('FLAIR') == "":
+                                            elif conf.SETTINGS.get('FLAIR_MODE') == 'mod':
+                                                if conf.SETTINGS.get('POST_THREAD').get('FLAIR') == "":
                                                     logger.error("FLAIR_MODE = mod, but POST_THREAD : FLAIR is blank...")
                                                 else:
                                                     logger.info("Adding flair to submission as mod...")
-                                                    game.get('postsub').mod.flair(self.SETTINGS.get('POST_THREAD').get('FLAIR'))
-                                                    logger.info("Submission flaired...")
+                                                    try:
+                                                        game.get('postsub').mod.flair(conf.SETTINGS.get('POST_THREAD').get('FLAIR'))
+                                                        logger.info("Submission flaired...")
+                                                    except:
+                                                        logger.error("Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing...")
 
-                                            if self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT') != "":
-                                                logger.info("Setting suggested sort to %s...",self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
+                                            if conf.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT') != "":
+                                                logger.info("Setting suggested sort to %s...",conf.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
                                                 try:
-                                                    game.get('postsub').mod.suggested_sort(self.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
+                                                    game.get('postsub').mod.suggested_sort(conf.SETTINGS.get('POST_THREAD').get('SUGGESTED_SORT'))
                                                     logger.info("Suggested sort set...")
                                                 except:
                                                     logger.error("Setting suggested sort on postgame thread failed (check mod privileges), continuing...")
 
-                                            if self.SETTINGS.get('POST_THREAD').get('TWITTER').get('ENABLED'):
+                                            if conf.SETTINGS.get('POST_THREAD').get('TWITTER').get('ENABLED'):
                                                 logger.info("Preparing to tweet link to postgame thread...")
                                                 if myteamwon=="1": winLossOther = "WIN"
                                                 elif myteamwon=="0": winLossOther = "LOSS"
                                                 else: winLossOther = "OTHER"
-                                                tweetText = edit.replace_params(self.SETTINGS.get('POST_THREAD').get('TWITTER').get(winLossOther+"_TEXT").replace('{link}',game.get('postsub').shortlink), 'post', 'tweet', k)
+                                                tweetText = edit.replace_params(conf.SETTINGS.get('POST_THREAD').get('TWITTER').get(winLossOther+"_TEXT").replace('{link}',game.get('postsub').shortlink), 'post', 'tweet', k)
                                                 twt.PostUpdate(tweetText)
                                                 logger.info("Tweet submitted...")
 
-                                            if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('POST_THREAD_SUBMITTED'):
+                                            if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('POST_THREAD_SUBMITTED'):
                                                 logger.info("Sending Prowl notification...")
                                                 if game.get('homeaway') == 'home':
                                                     vsat = 'vs. ' + game.get('gameInfo').get('away').get('team_name')
@@ -1257,13 +788,13 @@ class Bot:
                                                     opp = 'home'
                                                 if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                                 event = myteam.get('name') + ' Postgame Thread Posted'
-                                                description = 'Postgame thread posted to r/'+self.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
+                                                description = 'Postgame thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
                                                                 myteam.get('name')+'('+str(game.get('gameInfo').get(game.get('homeaway'),{}).get('runs',0))+') '+vsat+' ('+str(game.get('gameInfo').get(opp,{}).get('runs',0))+')\n' +\
                                                                 'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                                 'Thread title: '+game.get('posttitle')+'\n' +\
                                                                 'URL: '+game.get('postsub').shortlink
                                                 try:
-                                                    prowlResult = prowl.notify(event, description, self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('postsub').shortlink)
+                                                    prowlResult = prowl.notify(event, description, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), game.get('postsub').shortlink)
                                                     logger.info("Successfully sent notification to Prowl...")
                                                 except Exception, e:
                                                     logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, description, e)
@@ -1273,7 +804,7 @@ class Bot:
                                     except Exception, err:
                                         logger.error("Error while posting postgame thread: %s: continuing after 15 seconds...",err)
                                         time.sleep(15)
-                                elif not self.SETTINGS.get('POST_THREAD').get('ENABLED') and len(self.games):
+                                elif not conf.SETTINGS.get('POST_THREAD').get('ENABLED') and len(self.games):
                                     logger.info("Postgame thread disabled...")
                         else: 
                             logger.info("Game %s final or postponed, nothing to do... ",k)
@@ -1348,8 +879,9 @@ class Bot:
                         notifDesc += 'Game thread edit stats for '+b.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+' '+myteam.get('name')+' game '+vsat+':\n' +\
                                         'Total checks: ' + str(checks) + '\nTotal Edits: ' + str(edits) + '\nOverall edit rate: ' + str(overallRate)[:5] + '%\n\n' + \
                                         'Preview status checks: ' + str(previewChecks) + '\nPreview status edits: ' + str(previewEdits) + '\nPreview status edit rate: ' + str(previewRate)[:5] + '%\n\n' + \
-                                        'Live status checks: ' + str(liveChecks) + '\nLive status edits: ' + str(liveEdits) + '\nLive status edit rate: ' + str(liveRate)[:5] + '%\n\n' + \
-                                        'Delayed status checks: ' + str(delayedChecks) + '\nDelayed status edits: ' + str(delayedEdits) + '\nDelayed status edit rate: ' + str(delayedRate)[:5] + '%\n\n'
+                                        'Live status checks: ' + str(liveChecks) + '\nLive status edits: ' + str(liveEdits) + '\nLive status edit rate: ' + str(liveRate)[:5] + '%\n\n'
+                        if delayedChecks > 0:
+                            notifDesc += 'Delayed status checks: ' + str(delayedChecks) + '\nDelayed status edits: ' + str(delayedEdits) + '\nDelayed status edit rate: ' + str(delayedRate)[:5] + '%\n\n'
 
                     if len(self.editStatHistory) > 1:
                         numDays = len(self.editStatHistory)
@@ -1388,11 +920,11 @@ class Bot:
                         if numDelayedDays > 0:
                             notifDesc += '\n\nDelayed status checks ('+numDelayedDays+' games): ' + str(sumDelayedChecks) + '\nDelayed status edits: ' + str(sumDelayedEdits) + '\nDelayed status edit rate: ' + str(sumDelayedRate)[:5] + '%'
 
-                    if self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('END_OF_DAY_EDIT_STATS'):
+                    if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('END_OF_DAY_EDIT_STATS'):
                         event = myteam.get('name') + ' Game Thread Edit Stats'
                         logger.info("Sending Prowl notification with game thread edit stats...")
                         try:
-                            prowlResult = prowl.notify(event, notifDesc, self.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'))
+                            prowlResult = prowl.notify(event, notifDesc, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'))
                             logger.info("Successfully sent notification to Prowl...")
                         except Exception, e:
                             logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, notifDesc, e)
@@ -1415,6 +947,49 @@ class Bot:
             else:
                 logger.info("NEW DAY")
 
+    def update_settings(self,logger,conf,edit,myteam,timechecker):
+        while True:
+            try:
+                conf.SETTINGS = conf.get_from_file()
+            except Exception, e:
+                logger.critical("Could not read settings file [%s]: %s. Retrying in 60 seconds...",self.settings_file,e)
+                time.sleep(60)
+            else:
+                settings_results = conf.validate_all()
+                if len(settings_results.get('critical')): 
+                    logger.critical("Please address the above critical issues. Reloading settings and retrying in 60 seconds...")
+                    time.sleep(60)
+                else:
+                    if not edit: edit = editor.Editor({})
+                    if not timechecker: timechecker = timecheck.TimeCheck({})
+
+                    while True:
+                        myteam = edit.lookup_team_info(field='all',lookupfield='team_code',lookupval=conf.SETTINGS.get('TEAM_CODE'))
+                        if myteam.get('error'):
+                            logger.critical("Cannot start up without valid team info. Reloading settings and retrying in 60 seconds...")
+                            time.sleep(60)
+                        else: 
+                            logger.debug("Configured team: %s, team_id: %s",myteam.get('name_display_full'),myteam.get('team_id'))
+                            break
+                    if myteam == {} or myteam.get('team_code') != conf.SETTINGS.get('TEAM_CODE'):
+                        logger.critical("Invalid team code detected: %s -- use lookup_team_code.py to look up the correct team code; see README.md. Reloading settings and retrying in 60 seconds...",conf.SETTINGS.get('TEAM_CODE'))
+                        time.sleep(60)
+                    else:
+                        #now that settings are loaded, reset logger, editor, and timechecker with user settings
+                        logger.resetHandlers(conf.SETTINGS.get('LOGGING'),conf.SETTINGS.get('TEAM_CODE').lower()+'-bot')
+                        edit.SETTINGS = conf.SETTINGS
+                        timechecker.SETTINGS = conf.SETTINGS
+
+                        logger.debug("Settings: %s",conf.SETTINGS)
+                        return (logger,conf,edit,myteam,timechecker)
+
 if __name__ == '__main__':
-    program = Bot()
+    import os
+    settings_path = os.path.dirname(os.path.realpath(__file__)) + '/'
+    settings_file = 'settings.json'
+    if len(sys.argv)>1:
+        settings_file = next((x.split('=')[1] for x in sys.argv if x.startswith('--settings=') or x.startswith('-settings=') or x.startswith('/settings=')),'settings.json')
+    if settings_file.find('/') == -1 and settings_file.find('\\') == -1: #absolute path not provided, assume same path as main.py
+        settings_file = settings_path + settings_file
+    program = Bot(settings_file)
     program.run()

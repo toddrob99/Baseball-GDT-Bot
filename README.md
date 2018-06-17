@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.2
+### Current Version: 5.1.3
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -65,7 +65,7 @@ The following settings can be configured in `/src/settings.json`:
 
 * `OFF_THREAD` - offday thread settings
 	* `ENABLED` - do you want an off day thread on days when your team does not play? (true/false)
-	* `TITLE` - thread title. Team-related fields available through `lookup_team_info()` can be used, in the format `{myTeam:<field>}` (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). A list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27. The only other supported parameter is `{date:<format>}` with `<format>` including the variables listed on http://strftime.org/. Use `\{` or `\}` if you want to include `{` or `}` in your title. (Default: "OFF DAY THREAD: {date:%A, %B %d}")
+	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. Note: `{oppTeam}`, `{awayTeam}`, and `{homeTeam}` parameters are not supported for off day threads. (Default: "OFF DAY THREAD: The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) are off today - {date:%A, %B %d}")
 	* `TIME` - time to post the offday thread in bot's local time zone ("8AM")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
@@ -172,6 +172,18 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.3
+* Updated logger to include a startup log (file=debug, console=info) prior to settings being loaded, then reset logger once user settings are loaded
+* Updated logic to re-read settings file on a 60 second loop when critical fields cannot be validated. This allows you to fix the settings file without stopping and restarting the bot.
+* Added `config.py` module, which contains `Config` class that handles settings validation. The `conf.SETTINGS_CONFIG` dictionary holds metadata about available settings, including default values, allowed values when applicable (e.g. FLAIR_MODE can only be [mod, submitter, none]), and `validate_all()` replaces individual checks for settings that used to be in `main.py`. In addition to simplifying management of default values, this is groundwork for re-reading settings after each daily loop.
+* Added support for `--settings=<filename>` command line argument to specify settings file. This allows multiple copies of the same code to be run with different settings after daily reloads of settings is implemented. Absolute path supported; if only filename is provided, file must exist in /src/ folder where main.py is located.
+* Added daily reload and validation of settings file, to enable config changes without restarting the bot
+* Added error handling for `FLAIR_MODE`=`mod` when user does not have mod rights
+* Added support for `{myTeam:wins}` and `{myTeam:losses}` for off day thread titles/tweets, using new `get_record()` function which pulls wins & losses from standings API for a given team or list of teams
+* Clear team info cache earlier each day, so if MLB messes up the team info data, it will not take another full day to update
+* Only include delayed status in daily game thread edit stats notification if the game was delayed
+* Minor logging adjustments
 
 #### v5.1.2
 * Added `logger.py` module, which contains the `Logger` class that adds console and file handlers to the root logger. Enable and set log level for console and file in `settings.json` with the new `LOGGING` section (copy from `sample_settings.json`). `LOG_LEVEL` setting is deprecated. Default is file enabled/DEBUG and console enabled/INFO. Log files will be stored in `/logs` and named `TEAM_CODE-bot.log` (e.g. `phi-bot.log`), rotated daily with a week's logs retained.

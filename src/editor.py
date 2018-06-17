@@ -40,7 +40,7 @@ class Editor:
                 logging.debug("Downloading %s from MLB API...",link)
             while True:
                 try:
-                    api_response = urllib2.urlopen(self.SETTINGS.get('apiURL') + link)
+                    api_response = urllib2.urlopen(self.SETTINGS.get('STATSAPI_URL') + link)
                     self.gamesLive.update({link : json.load(api_response)})
                     self.gamesLive[link].update({'localTimestamp' : datetime.utcnow(),'localWait' : localWait})
                     break
@@ -86,6 +86,21 @@ class Editor:
         if isinstance(todaygames,dict): todaygames = [todaygames]
         return todaygames
 
+    def get_record(self,teamId,standingsType='regularSeason',season=None):
+        # returns dict containing 'wins' and 'losses' items (values are int)
+        # if teamId is a list, dict will contain an item with each teamId as the key
+        if not season: season = datetime.now().strftime('%Y')
+        if isinstance(teamId,str): teamId=int(teamId)
+        if isinstance(teamId,int): teamId=[teamId]
+        ret = {}
+        data = self.api_download('/api/v1/standings?leagueId=104,103&season='+season)
+        divisions = data.get('records')
+        for div in divisions:
+            for rec in (rec for rec in div.get('teamRecords') if rec['team']['id'] in teamId):
+                ret.update({rec['team']['id'] : {'wins':rec['wins'], 'losses':rec['losses']}})
+        if len(teamId)==1: return ret[teamId[0]]
+        else: return ret
+
     def replace_params(self,original,thread,type,k=None,timemachine=False,myteamwon=""):
         logging.debug("Replacing parameters in %s %s...",thread,type)
         replaced = original.replace('\{','PLACEHOLDEROPEN').replace('\}','PLACEHOLDERCLOSE').replace('\:','PLACEHOLDERCOLON').replace('\%','PLACEHOLDERMOD')
@@ -127,18 +142,16 @@ class Editor:
                         replaceVal = self.games[k].get('gameInfo').get('date_object').strftime(paramParts[5])
                 elif paramParts[4] == 'myTeam':
                     if paramParts[5] == 'wins':
-                        if thread == 'off': #TODO: wins currently not supported for off thread, because this value comes from the game data
-                            logging.warn("{myTeam:wins} parameter is currently not supported for off day thread %s, using 0...", type)
-                            replaceVal =  "0"
+                        if thread == 'off':
+                            replaceVal = str(self.get_record(int(self.lookup_team_info('team_id','team_code',self.SETTINGS.get('TEAM_CODE')))).get('wins'))
                         else:
                             if timemachine and myteamwon=="1":
                                 replaceVal = str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))-1)
                             else:
                                 replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))
                     elif paramParts[5] == 'losses':
-                        if thread == 'off': #TODO: losses currently not supported for off thread, because this value comes from the game data
-                            logging.warn("{myTeam:losses} parameter is currently not supported for off day thread %s, using 0...", type)
-                            replaceVal =  "0"
+                        if thread == 'off':
+                            replaceVal = str(self.get_record(int(self.lookup_team_info('team_id','team_code',self.SETTINGS.get('TEAM_CODE')))).get('losses'))
                         else:
                             if timemachine and myteamwon=="0":
                                 replaceVal = str(int(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))-1)
@@ -1177,19 +1190,22 @@ class Editor:
         else: ret = ""
         if not self.TEAMINFO.get(sport_code):
             try:
-                sportCodeUrl = "http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27" + sport_code + "%27&active_sw=%27Y%27&all_star_sw=%27N%27"
+                sportCodeUrl = "http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27" + sport_code + "%27&active_sw=%27Y%27"#&all_star_sw=%27N%27"
                 logging.debug("Downloading team info from MLB: %s", sportCodeUrl)
                 response = urllib2.urlopen(sportCodeUrl)
                 self.TEAMINFO.update({sport_code : json.load(response)})
             except urllib2.URLError, e:
                 logging.error("Couldn't connect to MLB server to download team info, returning null: %s",e)
-                return ret
+                if isinstance(ret,dict): return {'error':"Couldn't connect to MLB server to download team info: "+str(e)}
+                else: return ret
             except urllib2.HTTPError, e:
                 logging.error("Couldn't download team info, returning null: %s",e)
-                return ret
+                if isinstance(ret,dict): return {'error':"Couldn't download team info: "+str(e)}
+                else: return ret
             except Exception as e:
                 logging.error("Unknown error downloading team info, returning null: %s",e)
-                return ret
+                if isinstance(ret,dict): return {'error':"Unknown error downloading team info: "+str(e)}
+                else: return ret
         else:
             logging.debug("Using cached team info for sport code %s...", sport_code)
 

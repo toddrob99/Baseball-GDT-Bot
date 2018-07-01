@@ -245,7 +245,7 @@ class Config:
                                     }
                                 }
                             },
-                            "OFF_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TITLE","TIME","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","SUPPRESS_OFFSEASON","FOOTER","TWITTER"],
+                            "OFF_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TITLE","TIME","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","SUPPRESS_OFFSEASON","CONTENT","TWITTER"],
                                 "ENABLED": {"default":True,"type":"bool","critical":False},
                                 "TITLE": {"default":"OFF DAY THREAD: The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) are off today - {date:%A, %B %d}","type":"str","critical":False},
                                 "TIME": {"default":"8AM","type":"str","critical":False},
@@ -253,7 +253,11 @@ class Config:
                                 "INBOX_REPLIES": {"default":False,"type":"bool","critical":False},
                                 "FLAIR": {"default":"","type":"str","critical":False},
                                 "SUPPRESS_OFFSEASON": {"default":True,"type":"bool","critical":False},
-                                "FOOTER": {"default":"No game today. Feel free to discuss whatever you want in this thread.","type":"str","critical":False},
+                                "CONTENT": {"default":{},"type":"dict","critical":False,"children":["NEXT_GAME","DIV_STANDINGS","FOOTER"],
+                                    "NEXT_GAME": {"default":True,"type":"bool","critical":False},
+                                    "DIV_STANDINGS": {"default":True,"type":"bool","critical":False},
+                                    "FOOTER": {"default":"No game today. Feel free to discuss whatever you want in this thread.","type":"str","critical":False}
+                                },
                                 "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT"],
                                     "ENABLED": {"default":False,"type":"bool","critical":False},
                                     "TEXT": {"default":"The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}","type":"str","critical":False}
@@ -273,6 +277,7 @@ class Config:
                                     "HEADER": {"default":True,"type":"bool","critical":False},
                                     "BLURB": {"default":True,"type":"bool","critical":False},
                                     "PROBABLES": {"default":True,"type":"bool","critical":False},
+                                    "DIV_STANDINGS": {"default":True,"type":"bool","critical":False},
                                     "FOOTER": {"default":"","type":"str","critical":False}
                                 },
                                 "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT","CONSOLIDATED_DH_TEXT"],

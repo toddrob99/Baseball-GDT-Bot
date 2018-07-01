@@ -313,10 +313,16 @@ class Editor:
         logging.info("Returning %s title: %s...", thread, title)
         return title
 
-    def generate_thread_code(self, thread, gameid, othergameid=None):
+    def generate_thread_code(self, thread, gameid, othergameid=None, nextgame=None, offseason=False):
         code = ""
 
-        if thread=='pre':
+        if thread=='off':
+            if nextgame.get('date') and self.SETTINGS.get('OFF_THREAD').get('CONTENT').get('NEXT_GAME'): code += self.generate_next_game(next_game=nextgame)
+            if not offseason and self.SETTINGS.get('OFF_THREAD').get('CONTENT').get('DIV_STANDINGS'): code += "\n\n" + self.generate_standings()
+            if self.SETTINGS.get('OFF_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('OFF_THREAD').get('CONTENT').get('FOOTER')
+            if code in ["","\n\n","\n\n\n\n"]: code = "No game today." #don't want the post to be empty
+
+        elif thread=='pre':
             if othergameid and int(self.games[othergameid].get('gameNumber')) < int(self.games[gameid].get('gameNumber')) and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 tempgameid = othergameid
                 othergameid = gameid
@@ -336,6 +342,7 @@ class Editor:
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(gameid,thread="pre")
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'): code += "\n\n" + self.generate_blurb(gameid,'preview')
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code += "\n\n" + self.generate_probables(files,gameid)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('DIV_STANDINGS'): code += "\n\n" + self.generate_standings()
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER') and (not othergameid or not self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH')): code += "\n\n" + self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER')
             code += "\n\n"
 
@@ -1069,6 +1076,65 @@ class Editor:
         logging.debug("Next game not found, returning empty string...")
         return next
 
+    def get_standings(self, teamId=None, divisionId=None, leagueId=None, standingsType='regularSeason', season=None):
+        # teamId will be honored if provided, then divisionId, then leagueId. If none provided, all data will be returned
+        standings={}
+        league_id = leagueId if leagueId else '104,103'
+        if not season: season = datetime.now().strftime('%Y')
+        data = self.api_download('/api/v1/standings?leagueId='+str(league_id)+'&season='+str(season)+'&standingsType='+standingsType)
+        # Build all standings data
+        for div in (x for x in data.get('records',{}) if x.get('standingsType')==standingsType):
+            league = div.get('league',{}).get('id',0)
+            if not standings.get(league):
+                standings.update({league : {'link':div.get('league',{}).get('link',''), 'lastUpdated':div.get('league',{}).get('lastUpdated',datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))}})
+            division = div.get('division',{}).get('id',0)
+            divisionLink = div.get('division',{}).get('link','')
+            divisionLastUpdate = div.get('division',{}).get('lastUpdated',datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
+            if not standings.get(league,{}).get(division):
+                standings[league].update({division:{'link':divisionLink,'lastUpdated':divisionLastUpdate}})
+            teams = []
+            for team in div.get('teamRecords'): #records are already ordered by divisionRank
+                teams.append(team)
+            standings[league].update({division:{'link':divisionLink,'lastUpdated':divisionLastUpdate,'teams':teams}})
+        # Return the requested data
+        if teamId: # Return standings data for only the requested team
+            teamData = self.api_download('/api/v1/teams?teamId='+str(teamId))
+            myTeamData = next((x for x in teamData.get('teams',{}) if x.get('id')==teamId),{})
+            teamLeague = myTeamData.get('league',{}).get('id',0)
+            teamDiv = myTeamData.get('division',{}).get('id',0)
+            return next((z for z in standings.get(teamLeague,{}).get(teamDiv,{}).get('teams',{}) if z.get('team',{}).get('id')==teamId),{})
+        elif divisionId: # Return standings data for only the requested division
+            return next((v.get(divisionId) for k,v in standings.items() if v.get(divisionId)),{})
+        elif leagueId: # Return standings data for only the requested league
+            if isinstance(leagueId,str): return standings
+            else:
+                try:
+                    return standings[leagueId]
+                except KeyError: return {}
+        else: # Return all standings data
+            return standings
+
+    def generate_standings(self):
+        code=""
+        myteam = self.lookup_team_info('all','team_code',self.SETTINGS.get('TEAM_CODE'))
+        standings = self.get_standings(divisionId=int(myteam.get('division_id')))
+        i=1
+        code += "|"+myteam.get('division_abbrev',' ')+" Rank|Team|Wins|Losses|Games Back|Wild Card Rank|Wild Card Games Back|\n"
+        code += "|:--|:--|:--|:--|:--|:--|:--|\n"
+        for z in standings.get('teams',{}):
+            sub = self.lookup_team_info('sub','team_id',str(z.get('team',{}).get('id',0)))
+            if z.get('team',{}).get('id') == int(myteam.get('team_id')):
+                code += "|**"+str(i)+"**|**["+z.get('team',{}).get('name')+"]("+sub+")**|**"+str(z.get('wins','-'))+"**|**"+str(z.get('losses','-'))+"**|**"+str(z.get('divisionGamesBack','-'))+"**|**"+str(z.get('wildCardRank','-'))+"**|**"+str(z.get('wildCardGamesBack','-'))+"**|\n"
+            else:
+                code += "|"+str(i)+"|["+z.get('team',{}).get('name')+"]("+sub+")|"+str(z.get('wins','-'))+"|"+str(z.get('losses','-'))+"|"+str(z.get('divisionGamesBack','-'))+"|"+str(z.get('wildCardRank','-'))+"|"+str(z.get('wildCardGamesBack','-'))+"|\n"
+            i+=1
+        if code != "|"+myteam.get('division_abbrev','')+" Rank|Team|Wins|Losses|Games Back|Wild Card Rank|Wild Card Games Back|\n|:--|:--|:--|:--|:--|:--|:--|\n":
+            logging.debug("Returning standings...")
+            return code
+        else:
+            logging.debug("Returning standings (none)...")
+            return ""
+
     def didmyteamwin(self, k):
     #returns 0 for loss, 1 for win, 2 for tie, 3 for postponed/suspended/canceled, blank for exception
         myteamwon = ""
@@ -1138,8 +1204,9 @@ class Editor:
                         gameinfo = self.get_teams_time(pk=daygame.get('gamePk'),d=d)
                         if thisPk != 0:
                             thisgame = self.get_teams_time(pk=thisPk,d=d)
-                        if thisPk != 0 and thisgame.get('date_object') > gameinfo.get('date_object'):
+                        if thisPk != 0 and thisgame.get('date_object') > gameinfo.get('date_object') and gameinfo.get('date_object').date()==today:
                             #make sure not to return DH game 1 if current game is DH game 2
+                            logging.debug("Skipping DH game 1 (%s) on %s because current game is DH game 2...",daygame.get('gamePk'),d)
                             continue
                         else:
                             next_game[i] = {'pk': daygame.get('gamePk'), 'date' : d, 'days_away' : (d - today).days, 'homeaway' : homeaway, 'home_code' : gameinfo.get('home').get('team_code'), 'away_code' : gameinfo.get('away').get('team_code'), 'home_team_name' : gameinfo.get('home').get('team_name'), 'away_team_name' : gameinfo.get('away').get('team_name'), 'event_time' : gameinfo.get('date_object').strftime("%I:%M %p %Z"), 'series' : daygame.get('seriesDescription'), 'series_num' : daygame.get('seriesGameNumber'), 'gameType' : daygame.get('gameType')}
@@ -1150,7 +1217,7 @@ class Editor:
                         i += 1
 
             if len(next_game): 
-                logging.debug("next_game found game(s):",next_game)
+                logging.debug("next_game found game(s): %s",next_game)
             if len(next_game)>1:
                 for ngk,ng in next_game.items():
                     if (ng.get('homeaway')=='home' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('away_code'))=="") or (ng.get('homeaway')=='away' and self.lookup_team_info(field='team_code',lookupfield='team_code',lookupval=ng.get('home_code'))==""):
@@ -1158,9 +1225,8 @@ class Editor:
                     else:
                         logging.info("Found next game (%s) %s day(s) away on %s...", str(ng.get('pk')), (d - today).days, d.strftime('%m/%d/%Y'))
                         return ng
-                else:
-                    logging.info("Next game lookup found only games with placeholder opponents, returning the first one...")
-                    return next_game[0]
+                logging.info("Next game lookup found only games with placeholder opponents, returning the first one...")
+                return next_game[0]
             elif len(next_game)==1:
                 logging.info("Found next game %s day(s) away on %s...", (d - today).days, d.strftime('%m/%d/%Y'))
                 return next_game[0]

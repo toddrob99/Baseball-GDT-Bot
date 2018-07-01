@@ -36,7 +36,11 @@
         "INBOX_REPLIES": false,
         "FLAIR": "",
         "SUPPRESS_OFFSEASON": true,
-        "FOOTER": "No game today. Feel free to discuss whatever you want in this thread.",
+        "CONTENT": {
+            "NEXT_GAME": true,
+            "DIV_STANDINGS": true,
+            "FOOTER": "No game today. Feel free to discuss whatever you want in this thread."
+        },
         "TWITTER": {
             "ENABLED": false,
             "TEXT": "The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}"
@@ -56,6 +60,7 @@
             "HEADER": true,
             "BLURB": true,
             "PROBABLES": true,
+            "DIV_STANDINGS": true,
             "FOOTER": ""
         },
         "TWITTER": {

@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.3
+### Current Version: 5.1.4
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -18,13 +18,13 @@ This project contains a bot to post off day, pregame, game, and postgame discuss
 
 Go to reddit.com’s app page (https://www.reddit.com/prefs/apps), click on the “are you a developer? create an app” button. Fill out the name, description and about url. Enter whatever you please for name, `http://localhost:8080` for redirect uri, and the rest don't really matter. All of these variables can be changed later.
 
-Next, copy `sample_settings.json` to the `src` folder and rename it to `settings.json`. Open `/src/settings.json` with a text editor, fill in the `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` fields from your Reddit app, and run the `setup_oauth.py` script. 
+Next, copy `sample_settings.json` to the `src` folder and rename it to `settings.json`. Open `/src/settings.json` with a text editor, fill in the `CLIENT_ID`, `CLIENT_SECRET` and `REDIRECT_URI` fields from your Reddit app, and run the `setup_oauth.py` script. If you want to save your settings file somewhere else or have multiple settings files, specify the filename/path on the command line like this: `python setup_oauth.py --settings=settings-phi.json` or `python setup_oauth.py --settings=/path/to/settings.json`. If an absolute path is not provided, the file must be in the `/src/` folder along with `main.py`.
 
 Your browser will open and take you to a Reddit app authorization page. Make sure you are logged in to Reddit as the user you want the bot to run as, and click allow on the displayed web page. 
 
 Copy the code (everything after code=) from the URL in the browser address bar, paste it into the console, and press Enter. Your refresh token will be displayed. Copy the refresh token into `/src/settings.json` and save. 
 
-That's it for the oauth setup! Now configure the rest of your settings (or leave the defaults) and run `/src/main.py` to start your bot.
+That's it for the oauth setup! Now configure the rest of your settings (at least `SUBREDDIT` and `TEAM_CODE`; you can leave the defaults for the rest) and run `/src/main.py` to start your bot. If you want to save your settings file somewhere other than the /src/ folder or you have multiple settings files, specify the filename/path on the command line like this: `python src/main.py --settings=settings-phi.json` or `python src/main.py --settings=/path/to/settings.json`. If an absolute path is not provided, the file must be in the `/src/` folder along with `main.py`.
 
 #### Configuration Settings
 
@@ -71,7 +71,10 @@ The following settings can be configured in `/src/settings.json`:
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Off Day Thread")
 	* `SUPPRESS_OFFSEASON` - do you want to suppress off day threads during the off season? (true/false)
-	* `FOOTER` - text to include in the body of the post, below the next game info ("No game today. Feel free to discuss whatever you want in this thread.")
+	* `CONTENT`
+		* `NEXT_GAME` - do you want to include date/time/opponent for your team's next game in the off day thread body? (true/false)
+		* `DIV_STANDINGS` - do you want to include standings for your team's division in the off day thread body? (true/false)
+		* `FOOTER` - text to include in the body of the post, below the next game info ("No game today. Feel free to discuss whatever you want in this thread.")
 	* `TWITTER` - settings for tweeting off day thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
 		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}")
@@ -105,7 +108,8 @@ The following settings can be configured in `/src/settings.json`:
 	* `CONTENT`
 		* `HEADER` - include game info header in the post (true/false - strongly suggested: true)
 		* `BLURB` - include game headline and blurb about the game (true/false)
-		* `PROBABLES` - include probably pitchers in the post, along with reports (true/false)
+		* `PROBABLES` - include probable pitchers in the post, along with reports (true/false)
+		* `DIV_STANDINGS` - standings for your team's division in the post (true/false)
 		* `FOOTER` - text to include at the end of the post (e.g. "Let's go Phillies!" default: "")
 	* `TWITTER` - settings for tweeting pregame thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
@@ -172,6 +176,19 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.4
+* Added support to `setup_oauth.py` for settings file command line argument, e.g. `python setup_oauth.py --settings=settings-phi.json` or `python setup_oauth.py --settings=/path/to/settings.json`. If absolute path is not provided, the file must be in the /src/ folder along with main.py.
+* Updated README instructions to mention support for passing settings filename/path in command line argument
+* Added `get_standings()` function to get standings data for a given team, division, league, or all
+* Added `generate_standings()` function to generate a table of the configured team's division standings
+* Moved `OFF_THREAD`:`FOOTER` setting into new `OFF_THREAD`:`CONTENT` section, and added `NEXT_GAME` and `DIV_STANDINGS` settings to the same section
+* Added off thread support to `generate_thread_code()`; now all thread code is generated through this function
+* Added `DIV_STANDINGS` option to `PRE_THREAD`:`CONTENT`, between probable pitchers and footer
+* Fixed next game lookup when today's game is rescheduled to doubleheader game 2 tomorrow (it was returning DH game 2 instead of game 1)
+* Fixed debug logging in `next_game()` not including the list of found games
+* Fixed placeholder game handling in `next_game()`, which I don't think even applies to MLB Stats API but I'll find out when we get to the postseason
+* Fixed crash when sending game thread edit stats to prowl after a delayed game
 
 #### v5.1.3
 * Updated logger to include a startup log (file=debug, console=info) prior to settings being loaded, then reset logger once user settings are loaded

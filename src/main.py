@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.3'
+        self.VERSION = '5.1.4'
         self.games = games.Games().games
         self.gamesLive = games.Games().gamesLive
         self.editStats = {}
@@ -238,16 +238,7 @@ class Bot:
 
             if conf.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0 and not (offseason and conf.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON')):
                 timechecker.pregamecheck(conf.SETTINGS.get('OFF_THREAD').get('TIME'))
-                offday.update({'offtitle': edit.generate_title(0,"off"), 'offmessage' : conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
-                if next_game.get('date'): 
-                    nex = edit.generate_next_game(next_game=next_game)
-                    if len(conf.SETTINGS.get('OFF_THREAD').get('FOOTER')): nex += "\n\n"
-                    offday.update({'offmessage' : nex + conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
-                else: 
-                    if len(conf.SETTINGS.get('OFF_THREAD').get('FOOTER')) == 0:
-                        logger.warn("No date found for next game, and off day footer text is blank. Using default footer text since post cannot be blank...")
-                        offday.update({'offmessage' : "No game today. Feel free to discuss whatever you want in this thread."})
-                    else: offday.update({'offmessage' : conf.SETTINGS.get('OFF_THREAD').get('FOOTER')})
+                offday.update({'offtitle': edit.generate_title(0,"off"), 'offmessage' : edit.generate_thread_code('off',0,nextgame=next_game,offseason=offseason)})
                 try:
                     subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
                     for submission in subreddit.new():
@@ -918,7 +909,7 @@ class Bot:
                                         'Preview status checks: ' + str(sumPreviewChecks) + '\nPreview status edits: ' + str(sumPreviewEdits) + '\nPreview status edit rate: ' + str(sumPreviewRate)[:5] + '%\n\n' + \
                                         'Live status checks: ' + str(sumLiveChecks) + '\nLive status edits: ' + str(sumLiveEdits) + '\nLive status edit rate: ' + str(sumLiveRate)[:5] + '%'
                         if numDelayedDays > 0:
-                            notifDesc += '\n\nDelayed status checks ('+numDelayedDays+' games): ' + str(sumDelayedChecks) + '\nDelayed status edits: ' + str(sumDelayedEdits) + '\nDelayed status edit rate: ' + str(sumDelayedRate)[:5] + '%'
+                            notifDesc += '\n\nDelayed status checks ('+str(numDelayedDays)+' games): ' + str(sumDelayedChecks) + '\nDelayed status edits: ' + str(sumDelayedEdits) + '\nDelayed status edit rate: ' + str(sumDelayedRate)[:5] + '%'
 
                     if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('END_OF_DAY_EDIT_STATS'):
                         event = myteam.get('name') + ' Game Thread Edit Stats'

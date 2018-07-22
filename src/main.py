@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.5'
+        self.VERSION = '5.1.5.1'
         self.games = games.Games().games
         self.gamesLive = games.Games().gamesLive
         self.editStats = {}
@@ -793,10 +793,10 @@ class Bot:
                                                 else:
                                                     vsat = '@ ' + game.get('gameInfo').get('home').get('team_name')
                                                     opp = 'home'
-                                                if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                                 event = myteam.get('name') + ' Postgame Thread Posted'
+                                                if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                                 description = 'Postgame thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
-                                                                game.get('gameInfo').get(homeaway).get('team_name')+' ('+str(game.get('gameInfo').get(game.get('homeaway'),{}).get('runs',0))+') '+vsat+' ('+str(game.get('gameInfo').get(opp,{}).get('runs',0))+')\n' +\
+                                                                game.get('gameInfo').get(game.get('homeaway')).get('team_name')+' ('+str(game.get('gameInfo').get(game.get('homeaway'),{}).get('runs',0))+') '+vsat+' ('+str(game.get('gameInfo').get(opp,{}).get('runs',0))+')\n' +\
                                                                 'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                                 'Thread title: '+game.get('posttitle')+'\n' +\
                                                                 'URL: '+game.get('postsub').shortlink

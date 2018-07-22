@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.5
+### Current Version: 5.1.5.1
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -184,6 +184,9 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.5.1
+* Fixed two errors related to `POST_THREAD_SUBMITTED` Prowl notification
 
 #### v5.1.5
 * Added support for All-Star Game pre/game/post threads. Turn off with new `ASG` setting, and control title and tweet text with new `ASG_TITLE` and `ASG_TEXT` settings in pre/game/post thread settings

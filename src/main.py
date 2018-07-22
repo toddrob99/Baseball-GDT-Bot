@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.4'
+        self.VERSION = '5.1.5'
         self.games = games.Games().games
         self.gamesLive = games.Games().gamesLive
         self.editStats = {}
@@ -157,7 +157,7 @@ class Bot:
             logger.debug("Clearing daily game thread edit stats...")
             self.editStats.clear() #clear edit timestamps daily to keep memory usage down
 
-            todaygames = edit.get_schedule(today,myteam.get('team_id'))
+            todaygames = edit.get_schedule(today)#,myteam.get('team_id'))
 
             threads = {}
             offday = {}
@@ -174,6 +174,13 @@ class Bot:
                         homeaway = 'home'
                     elif awayteam == int(myteam.get('team_id')):
                         homeaway = 'away'
+                    elif todaygame.get('teams').get('home').get('team').get('id') in [159,160] and todaygame.get('teams').get('away').get('team').get('id') in [159,160]:
+                        if conf.SETTINGS.get('ASG'):
+                            logger.info("Detected All Star Game...")
+                            todaygame.update({'ASG':True})
+                            homeaway = 'home' if myteam.get('league_id') == edit.lookup_team_info('league_id','team_id',str(todaygame.get('teams').get('home').get('team').get('id'))) else 'away'
+                        else:
+                            logger.info("Detected All Star Game, but ASG threads are disabled. Ignoring...")
                     if homeaway != None:
                         logger.debug("Found game %s: %s",str(i),todaygame)
                         self.games[i] = todaygame
@@ -411,6 +418,11 @@ class Bot:
                                     logger.debug("Minutes until game thread post time: %s",minutes_until_post_time)
                                     if minutes_until_post_time <= conf.SETTINGS.get('PRE_THREAD').get('SUPPRESS_MINUTES'):
                                         logger.info("Suppressing pregame thread for Game %s because game thread will be posted soon...",k)
+                                        game.update({'presub_suppressed':True})
+                                        break
+                                    elif game.get('doubleheader') and conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH') and self.games[game.get('othergame')].get('presub_suppressed'):
+                                        logger.info("Suppressing pregame thread for Game %s because consolidated pregame threads are enabled and Game %s thread will be posted soon...",k,game.get('othergame'))
+                                        game.update({'presub_suppressed':True})
                                         break
                                 logger.info("Submitting pregame thread for Game %s...",k)
                                 game.update({'presub' : subreddit.submit(game.get('pretitle'), selftext=edit.generate_thread_code('pre',k,game.get('othergame')), send_replies=conf.SETTINGS.get('PRE_THREAD').get('INBOX_REPLIES'))})
@@ -461,6 +473,8 @@ class Bot:
                                     logger.info("Preparing to tweet link to pregame thread...")
                                     if game.get('doubleheader') and conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                                         tweetText = edit.replace_params(conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('CONSOLIDATED_DH_TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
+                                    elif game.get('ASG'):
+                                        tweetText = edit.replace_params(conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('ASG_TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
                                     else: tweetText = edit.replace_params(conf.SETTINGS.get('PRE_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('presub').shortlink), 'pre', 'tweet', k)
                                     twt.PostUpdate(tweetText)
                                     logger.info("Tweet submitted...")
@@ -468,13 +482,13 @@ class Bot:
                                 if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('PRE_THREAD_SUBMITTED'):
                                     logger.info("Sending Prowl notification...")
                                     if game.get('homeaway') == 'home':
-                                        vsat = 'vs. ' + game.get('gameInfo').get('away').get('team_name')
+                                        vsat = game.get('gameInfo').get('home').get('team_name') + ' vs. ' + game.get('gameInfo').get('away').get('team_name')
                                     else:
-                                        vsat = '@ ' + game.get('gameInfo').get('home').get('team_name')
+                                        vsat = game.get('gameInfo').get('away').get('team_name') + ' @ ' + game.get('gameInfo').get('home').get('team_name')
                                     event = myteam.get('name') + ' Pregame Thread Posted'
                                     if game.get('doubleheader') and not conf.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                     description = 'Pregame thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
-                                                    myteam.get('name')+' '+vsat+'\n' +\
+                                                    vsat+'\n' +\
                                                     'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                     'Thread title: '+game.get('pretitle')+'\n' +\
                                                     'URL: '+game.get('presub').shortlink
@@ -614,20 +628,21 @@ class Bot:
 
                                     if conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('ENABLED'):
                                         logger.info("Preparing to tweet link to game thread...")
-                                        tweetText = edit.replace_params(conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('gamesub').shortlink), 'game', 'tweet', k)
+                                        if game.get('ASG'): tweetText = edit.replace_params(conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('ASG_TEXT').replace('{link}',game.get('gamesub').shortlink), 'game', 'tweet', k)
+                                        else: tweetText = edit.replace_params(conf.SETTINGS.get('GAME_THREAD').get('TWITTER').get('TEXT').replace('{link}',game.get('gamesub').shortlink), 'game', 'tweet', k)
                                         twt.PostUpdate(tweetText)
                                         logger.info("Tweet submitted...")
 
                                     if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('GAME_THREAD_SUBMITTED'):
                                         logger.info("Sending Prowl notification...")
                                         if game.get('homeaway') == 'home':
-                                            vsat = 'vs. ' + game.get('gameInfo').get('away').get('team_name')
+                                            vsat = game.get('gameInfo').get('home').get('team_name') + ' vs. ' + game.get('gameInfo').get('away').get('team_name')
                                         else:
-                                            vsat = '@ ' + game.get('gameInfo').get('home').get('team_name')
+                                            vsat = game.get('gameInfo').get('away').get('team_name') + ' @ ' + game.get('gameInfo').get('home').get('team_name')
                                         event = myteam.get('name') + ' Game Thread Posted'
                                         if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                         description = 'Game thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
-                                                        myteam.get('name')+' '+vsat+'\n' +\
+                                                        vsat+'\n' +\
                                                         'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                         'Thread title: '+game.get('gametitle')+'\n' +\
                                                         'URL: '+game.get('gamesub').shortlink
@@ -762,7 +777,8 @@ class Bot:
 
                                             if conf.SETTINGS.get('POST_THREAD').get('TWITTER').get('ENABLED'):
                                                 logger.info("Preparing to tweet link to postgame thread...")
-                                                if myteamwon=="1": winLossOther = "WIN"
+                                                if game.get('ASG'): winLossOther = 'ASG'
+                                                elif myteamwon=="1": winLossOther = "WIN"
                                                 elif myteamwon=="0": winLossOther = "LOSS"
                                                 else: winLossOther = "OTHER"
                                                 tweetText = edit.replace_params(conf.SETTINGS.get('POST_THREAD').get('TWITTER').get(winLossOther+"_TEXT").replace('{link}',game.get('postsub').shortlink), 'post', 'tweet', k)
@@ -780,7 +796,7 @@ class Bot:
                                                 if game.get('doubleheader'): event += ' - DH Game ' + str(game.get('gameNumber'))
                                                 event = myteam.get('name') + ' Postgame Thread Posted'
                                                 description = 'Postgame thread posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+':\n' +\
-                                                                myteam.get('name')+'('+str(game.get('gameInfo').get(game.get('homeaway'),{}).get('runs',0))+') '+vsat+' ('+str(game.get('gameInfo').get(opp,{}).get('runs',0))+')\n' +\
+                                                                game.get('gameInfo').get(homeaway).get('team_name')+' ('+str(game.get('gameInfo').get(game.get('homeaway'),{}).get('runs',0))+') '+vsat+' ('+str(game.get('gameInfo').get(opp,{}).get('runs',0))+')\n' +\
                                                                 'First Pitch: '+game.get('gameInfo').get('date_object').strftime('%I:%M %p %Z')+'\n' +\
                                                                 'Thread title: '+game.get('posttitle')+'\n' +\
                                                                 'URL: '+game.get('postsub').shortlink

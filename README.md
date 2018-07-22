@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.4
+### Current Version: 5.1.5
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -41,6 +41,8 @@ The following settings can be configured in `/src/settings.json`:
 * `STICKY` - do you want the threads stickied? bot must have mod rights. (true/false)
 
 * `FLAIR_MODE` - do you want to set flair on offday/pre/game/post threads using a mod command (bot user must have mod rights), as the thread submitter (sub settings must allow), or none? ("none", "submitter", "mod") **NOTE**: in order to use this, you may have to re-do the OAuth setup process described above to obtain a new refresh token that includes flair permissions.
+
+* `ASG` - do you want threads for All-Star games? (true/false)
 
 * `LOGGING` - controls the amount of logging to the console and file (rotated daily with the previous week's log files retained)
 	* `FILE` - do you want to log to a file (`TEAM_CODE-bot.log` in the `/logs` directory, e.g. `/logs/phi-bot.log`)? (true/false)
@@ -98,6 +100,7 @@ The following settings can be configured in `/src/settings.json`:
 			* `%stripspaces` - strip all spaces (useful for hashtags), e.g. `{myTeam:name%stripspaces}` -> `WhiteSox`
 			* Multiple modifiers supported, e.g. `{myTeam:name%lower%stripspaces}` -> `whitesox`
 		* Use `\\{`, `\\}`, `\\:`, or `\\%` if you want to include `{`, `}`, `:`, or `%` in your title (the json decoder will fail if you try with only 1 escape character, e.g. `\{`)
+	* `ASG_TITLE` - thread title for All-Star Game pre threads. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "PREGAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}")
 	* `CONSOLIDATED_DH_TITLE` - thread title for doubleheader when `CONSOLIDATE_DH` is `true`. see `TITLE` for more info about available parameters, and it's probably best not to include game time in this (Default: "PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}")
 	* `TIME` - time to post the pregame thread in bot's local time zone ("8AM")
 	* `SUPPRESS_MINUTES` - pregame thread will be suppressed if game thread will be posted within this number of minutes. A value of 0 will suppress the pregame thread only if it is already time to post the game thread. Set to -1 to disable suppression based on game thread post time. (-1, 0, 60, 120, etc. default: 0)
@@ -115,9 +118,11 @@ The following settings can be configured in `/src/settings.json`:
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
 		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "Game day! {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}")
 		* `CONSOLIDATED_DH_TEXT` - what do you want your tweet to say for doubleheaders when `CONSOLIDATE_DH` is `true`? see `TEXT` for more info. (suggested: "Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `ASG_TEXT` - what do you want your tweet to say for All-Star games? see `TEXT` for more info. (suggested: "All-Star Game day! {awayTeam:name} @ {homeTeam:name} - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #MLBAllStarGame #ASG{date:%Y}")
 
 * `GAME_THREAD` - game thread settings
 	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `ASG_TITLE` - thread title for All-Star Game. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}")
 	* `HOURS_BEFORE` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
@@ -135,12 +140,14 @@ The following settings can be configured in `/src/settings.json`:
 	* `TWITTER` - settings for tweeting game thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
 		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `ASG_TEXT` - what do you want your tweet to say for All-Star Games? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D}! {awayTeam:name} @ {homeTeam:name} - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #MLBAllStarGame #ASG{date:%Y}")
 
 * `POST_THREAD` - postgame thread settings
 	* `ENABLED` - do you want a post game thread? (true/false)
 	* `WIN_TITLE` - thread title when game result is win. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `LOSS_TITLE` - thread title when game result is loss. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `OTHER_TITLE` - thread title when game result is tie/postponed/suspended/canceled. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "POST GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
+	* `ASG_TITLE` - thread title for All-Star Games. see `PRE_THREAD` : `TITLE` for more info about available parameters. (Default: "POSTGAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}")
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Postgame Thread")
@@ -154,6 +161,7 @@ The following settings can be configured in `/src/settings.json`:
 		* `WIN_TEXT` - what do you want your tweet to say when your team wins? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name}, {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 		* `LOSS_TEXT` - what do you want your tweet to say when your team loses? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name}, {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
+		* `ASG_TEXT` - what do you want your tweet to say for All-Star Games? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D - }The discussion continues in our postgame thread: {link} #MLBAllStarGame #ASG{date:%Y}")
 
 ---
 
@@ -176,6 +184,11 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.5
+* Added support for All-Star Game pre/game/post threads. Turn off with new `ASG` setting, and control title and tweet text with new `ASG_TITLE` and `ASG_TEXT` settings in pre/game/post thread settings
+* Fixed error due to sport code not being available in MLB data after game has ended
+* Fixed consolidated pregame thread not being suppressed for split doubleheader when Game 1 game thread will be posted within the configured `SUPPRESS_MINUTES` threshold
 
 #### v5.1.4
 * Added support to `setup_oauth.py` for settings file command line argument, e.g. `python setup_oauth.py --settings=settings-phi.json` or `python setup_oauth.py --settings=/path/to/settings.json`. If absolute path is not provided, the file must be in the /src/ folder along with main.py.

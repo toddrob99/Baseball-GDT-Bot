@@ -23,6 +23,9 @@ class Editor:
 
     def api_download(self,link,critical=True,sleepTime=10,forceDownload=False,localWait=4,apiVer=None):
         usecache=False
+        if not link:
+            logging.error("No link provided to download. Returning empty dict...")
+            return {}
         if apiVer:
             link = '/api/' + apiVer + link[link.find('/',link.find('/api/')+5):]
             logging.debug("updated api link per apiVer param: %s",link)
@@ -241,8 +244,8 @@ class Editor:
                         logging.warn("{series} parameter is not supported for off day thread %s, removing...", type)
                         replaceVal =  ''
                     else:
-                        if self.games[k].get('gameType') in ['I', 'E', 'S','R']:
-                            logging.debug("{series} parameter only applies to post season games, removing...")
+                        if self.games[k].get('gameType') in ['I', 'E', 'S', 'R']:
+                            logging.debug("{series} parameter only applies to post season and All-Star games, removing...")
                             replaceVal =  ''
                         else:
                             series = paramParts[5].replace('%D',self.games[k].get('seriesDescription')).replace('%N',str(self.games[k].get('seriesGameNumber')))
@@ -301,10 +304,16 @@ class Editor:
         elif thread == "pre":
             if self.games[k].get('doubleheader') and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 title = self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATED_DH_TITLE')
+            elif self.games[k].get('ASG'):
+                title = self.SETTINGS.get('PRE_THREAD').get('ASG_TITLE')
             else: title = self.SETTINGS.get('PRE_THREAD').get('TITLE')
-        elif thread == "game": title = self.SETTINGS.get('GAME_THREAD').get('TITLE')
+        elif thread == "game":
+            if self.games[k].get('ASG'):
+                title = self.SETTINGS.get('GAME_THREAD').get('ASG_TITLE')
+            else: title = self.SETTINGS.get('GAME_THREAD').get('TITLE')
         elif thread == "post":
-            if myteamwon == "0": title = self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')
+            if self.games[k].get('ASG'): title = self.SETTINGS.get('POST_THREAD').get('ASG_TITLE')
+            elif myteamwon == "0": title = self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')
             elif myteamwon == "1": title = self.SETTINGS.get('POST_THREAD').get('WIN_TITLE')
             else: title = self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE')
 

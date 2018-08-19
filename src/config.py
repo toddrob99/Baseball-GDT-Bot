@@ -1,4 +1,5 @@
 # handles loading and validation of settings
+# encoding: utf-8
 
 import simplejson as json
 import logging
@@ -81,7 +82,8 @@ class Config:
         elif (fieldSettings.get('type') == 'bool' and not isinstance(value,bool)) or \
                 (fieldSettings.get('type') == 'str' and not (isinstance(value,str) or isinstance(value,unicode))) or \
                 (fieldSettings.get('type') == 'int' and not isinstance(value,int)) or \
-                (fieldSettings.get('type') == 'dict' and not isinstance(value,dict)):
+                (fieldSettings.get('type') == 'dict' and not isinstance(value,dict)) or \
+                (fieldSettings.get('type') == 'list' and not isinstance(value,list)):
             if fieldSettings.get('critical'): #is the field critical?
                 logging.critical("Type mismatch for critical field [%s]! Expected [%s] and found [%s].",field,fieldSettings.get('type'),type(value))
                 critical.append('Type mismatch for critical field ['+field+']! Expected ['+fieldSettings.get('type')+'] and found ['+str(type(value))+'].')
@@ -264,7 +266,7 @@ class Config:
                                     "TEXT": {"default":"The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}","type":"str","critical":False}
                                 }
                             },
-                            "PRE_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TITLE","CONSOLIDATED_DH_TITLE","TIME","SUPPRESS_MINUTES","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","CONSOLIDATE_DH","CONTENT","TWITTER"],
+                            "PRE_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TITLE","CONSOLIDATED_DH_TITLE","ASG_TITLE","TIME","SUPPRESS_MINUTES","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","CONSOLIDATE_DH","CONTENT","TWITTER"],
                                 "ENABLED": {"default":True,"type":"bool","critical":False},
                                 "TITLE": {"default":"PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}","type":"str","critical":False},
                                 "CONSOLIDATED_DH_TITLE": {"default":"PREGAME THREAD:{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d}{dh: - DOUBLEHEADER}","type":"str","critical":False},
@@ -275,21 +277,21 @@ class Config:
                                 "INBOX_REPLIES": {"default":False,"type":"bool","critical":False},
                                 "FLAIR": {"default":"","type":"str","critical":False},
                                 "CONSOLIDATE_DH": {"default":True,"type":"bool","critical":False},
-                                "CONTENT": {"default":{},"type":"dict","critical":False,"children":["HEADER","BLURB","PROBABLES","FOOTER"],
+                                "CONTENT": {"default":{},"type":"dict","critical":False,"children":["HEADER","BLURB","PROBABLES","DIV_STANDINGS","FOOTER"],
                                     "HEADER": {"default":True,"type":"bool","critical":False},
                                     "BLURB": {"default":True,"type":"bool","critical":False},
                                     "PROBABLES": {"default":True,"type":"bool","critical":False},
                                     "DIV_STANDINGS": {"default":True,"type":"bool","critical":False},
                                     "FOOTER": {"default":"","type":"str","critical":False}
                                 },
-                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT","CONSOLIDATED_DH_TEXT"],
+                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT","CONSOLIDATED_DH_TEXT","ASG_TEXT"],
                                     "ENABLED": {"default":False,"type":"bool","critical":False},
                                     "TEXT": {"default":"Game day!{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader game %N}","type":"str","critical":False},
                                     "CONSOLIDATED_DH_TEXT": {"default":"Doubleheader day!{series: %D -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}). Join the discussion in our pregame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}","type":"str","critical":False},
                                     "ASG_TEXT": {"default":"All-Star Game day! {awayTeam:name} @ {homeTeam:name} - {date:%I:%M%p %Z}. Join the discussion in our pregame thread: {link} #MLBAllStarGame #ASG{date:%Y}","type":"str","critical":False}
                                 }
                             },
-                            "GAME_THREAD": {"default":{},"type":"dict","critical":False,"children":["TITLE","HOURS_BEFORE","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","MESSAGE","HOLD_DH_GAME2_THREAD","EXTRA_SLEEP","CONTENT","TWITTER"],
+                            "GAME_THREAD": {"default":{},"type":"dict","critical":False,"children":["TITLE","ASG_TITLE","HOURS_BEFORE","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","MESSAGE","HOLD_DH_GAME2_THREAD","EXTRA_SLEEP","CONTENT","NOTABLE_PLAY_COMMENTS","TWITTER"],
                                 "TITLE": {"default":"GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}","type":"str","critical":False},
                                 "ASG_TITLE": {"default":"GAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}","type":"str","critical":False},
                                 "HOURS_BEFORE": {"default":3,"type":"int","critical":False},
@@ -314,13 +316,28 @@ class Config:
                                     "PREVIEW_PROBABLES": {"default":True,"type":"bool","critical":False},
                                     "NEXT_GAME": {"default":True,"type":"bool","critical":False}
                                 },
-                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT"],
+                                "NOTABLE_PLAY_COMMENTS": {"default":{},"type":"dict","critical":False,"children":["ENABLED","MYTEAM_BATTING","MYTEAM_PITCHING","PITCH_STATS","HIT_STATS"],
+                                    "ENABLED": {"default":False,"type":"bool","critical":False},
+                                    "MYTEAM_BATTING": {"default":{},"type":"dict","critical":False,"children":["EVENTS","HEADER","FOOTER"],
+                                        "EVENTS": {"default":["Home Run", "Pitcher Substitution", "Scoring Play", "Stolen Base Home"],"type":"list","critical":False},
+                                        "HEADER": {"default":{},"type":"dict","critical":False},
+                                        "FOOTER": {"default":{},"type":"dict","critical":False}
+                                    },
+                                    "MYTEAM_PITCHING": {"default":{},"type":"dict","critical":False,"children":["EVENTS","HEADER","FOOTER"],
+                                        "EVENTS": {"default":["Pitcher Substitution", "Strikeout", "Strikeout_Called", "Triple Play"],"type":"list","critical":False},
+                                        "HEADER": {"default":{},"type":"dict","critical":False},
+                                        "FOOTER": {"default":{},"type":"dict","critical":False}
+                                    },
+                                    "PITCH_STATS": {"default":["Strikeout_Called", "Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Hit By Pitch", "Home Run", "Lineout", "Passed Ball", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Strikeout", "Strikeout - DP", "Triple", "Triple Play", "Walk", "Wild Pitch"],"type":"list","critical":False},
+                                    "HIT_STATS": {"default":["Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Home Run", "Lineout", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Triple", "Triple Play"],"type":"list","critical":False}
+                                },
+                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT","ASG_TEXT"],
                                     "ENABLED": {"default":False,"type":"bool","critical":False},
                                     "TEXT": {"default":"{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}","type":"str","critical":False},
                                     "ASG_TEXT": {"default":"{series:%D}! {awayTeam:name} @ {homeTeam:name} - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #MLBAllStarGame #ASG{date:%Y}","type":"str","critical":False}
                                 }
                             },
-                            "POST_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","WIN_TITLE","LOSS_TITLE","OTHER_TITLE","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","CONTENT","TWITTER"],
+                            "POST_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","WIN_TITLE","LOSS_TITLE","OTHER_TITLE","ASG_TITLE","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","CONTENT","TWITTER"],
                                 "ENABLED": {"default":True,"type":"bool","critical":False},
                                 "WIN_TITLE": {"default":"WIN THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) defeated the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {myTeam:runs}-{oppTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}","type":"str","critical":False},
                                 "LOSS_TITLE": {"default":"LOSS THREAD:{series: %D Game %N -} The {myTeam:name} ({myTeam:wins}-{myTeam:losses}) fell to the {oppTeam:name} ({oppTeam:wins}-{oppTeam:losses}) by a score of {oppTeam:runs}-{myTeam:runs} - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}","type":"str","critical":False},
@@ -340,7 +357,7 @@ class Config:
                                     "THEATER_LINK": {"default":True,"type":"bool","critical":False},
                                     "NEXT_GAME": {"default":True,"type":"bool","critical":False}
                                 },
-                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","WIN_TEXT","LOSS_TEXT","OTHER_TEXT"],
+                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","WIN_TEXT","LOSS_TEXT","OTHER_TEXT","ASG_TEXT"],
                                     "ENABLED": {"default":False,"type":"bool","critical":False},
                                     "WIN_TEXT": {"default":"{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} defeated the {oppTeam:name} {myTeam:runs}-{oppTeam:runs}! Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}","type":"str","critical":False},
                                     "LOSS_TEXT": {"default":"{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name} {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}","type":"str","critical":False},

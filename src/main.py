@@ -35,9 +35,8 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.5.1'
+        self.VERSION = '5.1.6'
         self.games = games.Games().games
-        self.gamesLive = games.Games().gamesLive
         self.editStats = {}
         self.editStatHistory = []
         self.settings_file = settings_file
@@ -156,6 +155,8 @@ class Bot:
             edit.gamesLive.clear() #clear api cache daily to keep memory usage down
             logger.debug("Clearing daily game thread edit stats...")
             self.editStats.clear() #clear edit timestamps daily to keep memory usage down
+            logger.debug("Clearing game comment history...")
+            edit.gamesComments.clear() #clear game comment history daily to keep memory usage down
 
             todaygames = edit.get_schedule(today)#,myteam.get('team_id'))
 
@@ -203,10 +204,10 @@ class Bot:
                             self.games[i].update({'url' : gameurl})
                         ## End support for legacy URL
                         logger.debug("Legacy data directory for Game %s: %s",str(i), self.games[i].get('url'))
-                        self.games[i].update({'gameInfo' : edit.get_teams_time(pk=self.games[i].get('gamePk'),d=today.date())})
+                        self.games[i].update({'gameInfo' : edit.get_teams_time(pk=self.games[i].get('gamePk'),d=today.date()), 'atBatIndex':edit.get_latest_atBatIndex(i)})
                         self.games[i].get('gameInfo').pop('status') #remove redundant status node (it won't be kept up-to-date anyway)
                         threads[i] = {'game' : '', 'post' : '', 'pre' : ''}
-                        self.editStats.update({i: {'checked' : [], 'edited' : []}})
+                        self.editStats.update({i: {'checked' : [], 'edited' : [], 'commented' : []}})
                         i += 1
                 if len(self.games) > 1:
                     for a,g in self.games.items(): #Update games with id of other game in the doubleheader
@@ -663,6 +664,18 @@ class Bot:
                             check = edit.convert_tz(datetime.utcnow(),'bot')
                             if game.get('skipflag'): game.update({'skipflag':False})
                             else:
+                                if game.get('gamesub') and conf.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('ENABLED') and (len(conf.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS'))>0 or len(conf.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))>0):
+                                    logger.debug("Checking for notable plays...")
+                                    notablePlayComment, notablePlayCounts = edit.generate_notable_play_comment(k)
+                                    if notablePlayComment != "":
+                                        logger.info("Submitting notable play comment...")
+                                        try:
+                                            game.get('gamesub').reply(notablePlayComment)
+                                            logger.info("Notable play comment submitted...")
+                                            self.editStats[k]['commented'].append(notablePlayCounts)
+                                        except:
+                                            logger.error("Error submitting notable play comment, continuing...")
+
                                 while True:
                                     statusCheck = edit.get_status(k)
                                     game.update({'status' : statusCheck})
@@ -859,10 +872,13 @@ class Bot:
                         delayedEdits = sum(1 for x in self.editStats[a]['edited'] if x.get('detailedState').startswith('Delayed'))
                         previewEdits = sum(1 for x in self.editStats[a]['edited'] if x.get('abstractGameState') == 'Preview' and not x.get('detailedState').startswith('Delayed'))
 
-                        self.editStatHistory.append({'checks': checks, 'edits': edits, 'liveChecks': liveChecks, 
+                        commentCount = len(self.editStats[a].get('commented',[]))
+
+                        self.editStatHistory.append({'checks': checks, 'edits': edits, 'liveChecks': liveChecks,
                                                         'liveEdits': liveEdits, 'delayedChecks': delayedChecks,
                                                         'delayedEdits': delayedEdits, 'previewChecks': previewChecks,
-                                                        'previewEdits': previewEdits, 'gameDate': b.get('gameInfo').get('date_object_utc').strftime('%Y-%m-%dT%H:%M:%SZ')})
+                                                        'previewEdits': previewEdits, 'comments': commentCount,
+                                                        'gameDate': b.get('gameInfo').get('date_object_utc').strftime('%Y-%m-%dT%H:%M:%SZ')})
 
                         if liveChecks != 0:
                             liveRate = liveEdits/(liveChecks*1.0)*100
@@ -878,6 +894,8 @@ class Bot:
                         logger.info("Game thread edit stats for Game %s Preview status: %s checks, %s edits, %s%% edit rate.", a, previewChecks, previewEdits, previewRate)
                         logger.info("Game thread edit stats for Game %s Live status: %s checks, %s edits, %s%% edit rate.", a, liveChecks, liveEdits, liveRate)
                         logger.info("Game thread edit stats for Game %s Delayed status: %s checks, %s edits, %s%% edit rate.", a, delayedChecks, delayedEdits, delayedRate)
+                        if commentCount > 0: logger.info("Comments submitted by bot to Game %s game thread: %s.", a, commentCount)
+                        logger.info("Max Reddit API utilization today: %s.", maxapi)
 
                         if b.get('homeaway') == 'home':
                             vsat = 'vs. ' + b.get('gameInfo').get('away').get('team_name')
@@ -889,6 +907,9 @@ class Bot:
                                         'Live status checks: ' + str(liveChecks) + '\nLive status edits: ' + str(liveEdits) + '\nLive status edit rate: ' + str(liveRate)[:5] + '%\n\n'
                         if delayedChecks > 0:
                             notifDesc += 'Delayed status checks: ' + str(delayedChecks) + '\nDelayed status edits: ' + str(delayedEdits) + '\nDelayed status edit rate: ' + str(delayedRate)[:5] + '%\n\n'
+                        if commentCount > 0:
+                            notifDesc += 'Comments submitted by bot: ' + str(commentCount) + '\n\n'
+                        notifDesc += 'Max Reddit API utilization today: ' + str(maxapi) + '\n\n'
 
                     if len(self.editStatHistory) > 1:
                         numDays = len(self.editStatHistory)
@@ -901,6 +922,7 @@ class Bot:
                         sumDelayedEdits = sum(x.get('delayedEdits') for x in self.editStatHistory)
                         sumPreviewChecks = sum(x.get('previewChecks') for x in self.editStatHistory)
                         sumPreviewEdits = sum(x.get('previewEdits') for x in self.editStatHistory)
+                        sumCommentCount = sum(x.get('comments') for x in self.editStatHistory)
 
                         if sumChecks != 0:
                             sumOverallRate = sumEdits/(sumChecks*1.0)*100
@@ -914,11 +936,14 @@ class Bot:
                         if sumPreviewChecks != 0:
                             sumPreviewRate = sumPreviewEdits/(sumPreviewChecks*1.0)*100
                         else: sumPreviewRate = '-'
+                        if sumCommentCount != 0:
+                            sumCommentRate = sumCommentCount/(numDays)
 
                         logger.info("Average game thread edit stats over last %s games (all statuses): %s checks, %s edits, %s%% edit rate.", numDays, sumChecks, sumEdits, sumOverallRate)
                         logger.info("Average game thread edit stats over last %s games (Preview status): %s checks, %s edits, %s%% edit rate.", numDays, sumPreviewChecks, sumPreviewEdits, sumPreviewRate)
                         logger.info("Average game thread edit stats over last %s games (Live status): %s checks, %s edits, %s%% edit rate.", numDays, sumLiveChecks, sumLiveEdits, sumLiveRate)
                         logger.info("Average game thread edit stats over last %s games (%s games with Delayed status): %s checks, %s edits, %s%% edit rate.", numDays, numDelayedDays, sumDelayedChecks, sumDelayedEdits, sumDelayedRate)
+                        logger.info("Average game thread comments submitted by bot over last %s games: %s comments per game.", numDays, sumCommentRate)
                         
                         notifDesc += 'Average game thread edit stats for last '+str(numDays)+' games:\n' +\
                                         'Total checks: ' + str(sumChecks) + '\nTotal Edits: ' + str(sumEdits) + '\nOverall edit rate: ' + str(sumOverallRate)[:5] + '%\n\n' + \
@@ -926,6 +951,8 @@ class Bot:
                                         'Live status checks: ' + str(sumLiveChecks) + '\nLive status edits: ' + str(sumLiveEdits) + '\nLive status edit rate: ' + str(sumLiveRate)[:5] + '%'
                         if numDelayedDays > 0:
                             notifDesc += '\n\nDelayed status checks ('+str(numDelayedDays)+' games): ' + str(sumDelayedChecks) + '\nDelayed status edits: ' + str(sumDelayedEdits) + '\nDelayed status edit rate: ' + str(sumDelayedRate)[:5] + '%'
+                        if sumCommentCount > 0:
+                            notifDesc += '\n\nAverage comments submitted by bot per game: ' + str(sumCommentRate)
 
                     if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('END_OF_DAY_EDIT_STATS'):
                         event = myteam.get('name') + ' Game Thread Edit Stats'

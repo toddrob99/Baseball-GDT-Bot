@@ -4,3 +4,4 @@ class Games:
 
     games = {}
     gamesLive = {}
+    gamesComments = {}

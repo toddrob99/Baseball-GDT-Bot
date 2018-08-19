@@ -1,4 +1,5 @@
 # does all the post generating and editing
+# encoding: utf-8
 
 import player
 
@@ -16,6 +17,7 @@ class Editor:
 
     games = gamesModule.Games().games
     gamesLive = gamesModule.Games().gamesLive
+    gamesComments = gamesModule.Games().gamesComments
 
     def __init__(self,settings):
         self.SETTINGS = settings
@@ -161,11 +163,12 @@ class Editor:
                             else:
                                 replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('loss'))
                     elif paramParts[5] == 'runs':
-                        if thread != 'post': #runs only supported for post thread/tweet
+                        if thread not in ['post','notable_play']: #runs only supported for post thread/tweet and notable play comment
                             logging.warn("{myTeam:runs} parameter is only supported for postgame thread, using 0...")
                             replaceVal =  "0"
                         else:
-                            replaceVal =  str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('runs'))
+                            gameLive = self.api_download(self.games[k].get('link'))
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get(self.games[k].get('homeaway'),{}).get('runs',0))
                     else:
                         replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
@@ -186,11 +189,12 @@ class Editor:
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('loss'))
                         elif paramParts[5] == 'runs':
-                            if thread != 'post': #runs only supported for post thread/tweet
+                            if thread not in ['post','notable_play']: #runs only supported for post thread/tweet and notable play comment
                                 logging.warn("{oppTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                replaceVal =  str(self.games[k].get('gameInfo').get(opp).get('runs'))
+                                gameLive = self.api_download(self.games[k].get('link'))
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get(opp,{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
@@ -209,11 +213,12 @@ class Editor:
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('away').get('loss'))
                         elif paramParts[5] == 'runs':
-                            if thread != 'post': #runs only supported for post thread/tweet
+                            if thread not in ['post','notable_play']: #runs only supported for post thread/tweet and notable play comment
                                 logging.warn("{awayTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                replaceVal =  str(self.games[k].get('gameInfo').get('away').get('runs'))
+                                gameLive = self.api_download(self.games[k].get('link'))
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('away',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
@@ -232,11 +237,12 @@ class Editor:
                             else:
                                 replaceVal =  str(self.games[k].get('gameInfo').get('home').get('loss'))
                         elif paramParts[5] == 'runs':
-                            if thread != 'post': #runs only supported for post thread/tweet
+                            if thread not in ['post','notable_play']: #runs only supported for post thread/tweet and notable play comment
                                 logging.warn("{homeTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                replaceVal =  str(self.games[k].get('gameInfo').get('home').get('runs'))
+                                gameLive = self.api_download(self.games[k].get('link'))
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('home',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
@@ -831,6 +837,150 @@ class Editor:
         logging.debug("Returning scoringplays...")
         return scoringplays
 
+    def get_latest_atBatIndex(self,gameid):
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
+        if len(gameAllPlays) == 0:
+            logging.debug("Returning latest atBatIndex (none)...")
+            return {'id':0, 'actions':[], 'pitches':[]}
+        id=gameAllPlays[-1].get('about',{}).get('atBatIndex',0)
+        action=gameAllPlays[-1].get('actions',[])
+        pitch=gameAllPlays[-1].get('pitches',[])
+        logging.debug("Returning latest atBatIndex, id:%s, actions:%s, pitches:%s...",id,action,pitch)
+        return {'id':id, 'actions':action, 'pitches':pitch}
+    
+    def get_notable_plays(self,gameid):
+        notablePlays = []
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
+        if len(gameAllPlays) == 0:
+            logging.debug("Returning notable plays (none)...")
+            return []
+        newPlays = [v for v in gameAllPlays if v.get('about').get('atBatIndex') >= self.games[gameid].get('atBatIndex',{}).get('id',0)]
+
+        for play in newPlays:
+            if not self.gamesComments.get(play.get('about').get('atBatIndex')): self.gamesComments.update({play.get('about').get('atBatIndex') : []})
+            battingTeam = 'myTeam' if (play.get('about').get('halfInning') == 'bottom' and self.games[gameid].get('homeaway') == 'home') or (play.get('about').get('halfInning') == 'top' and self.games[gameid].get('homeaway') == 'away') else 'oppTeam'
+            logging.debug("play atBatIndex %s (isComplete: %s, actions: %s, pitches: %s) - %s %s - %s batting: Type: %s, Event: %s, Description: %s",play.get('about').get('atBatIndex'),play.get('about').get('isComplete'),play.get('actions'),play.get('pitches'),play.get('about').get('halfInning'),play.get('about').get('inning'),battingTeam,play.get('result').get('type'),play.get('result').get('event'),play.get('result').get('description'))
+            for i in play.get('actions',[]):
+                event = play.get('playEvents')[i]
+                if (event.get('isPitch') and i not in self.games[gameid].get('atBatIndex',{}).get('pitches')) or (not event.get('isPitch') and i not in self.games[gameid].get('atBatIndex',{}).get('actions')):
+                    if i not in self.games[gameid]['atBatIndex']['actions'] \
+                      and ((battingTeam =='myTeam' and event.get('details').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
+                      or (battingTeam =='oppTeam' and event.get('details').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
+                        if {event.get('details').get('event','') : event.get('details').get('description')} not in self.gamesComments.get(play.get('about').get('atBatIndex')):
+                            notablePlays.append({'battingTeam':battingTeam, 'type':'event', 'event':event, 'about':play.get('about')})
+                            self.gamesComments[play.get('about').get('atBatIndex')].append({event.get('details').get('event','') : event.get('details').get('description')})
+                        else:
+                            logging.debug("Action event %s for atBatIndex %s already commented.", event.get('details').get('event',''), play.get('about').get('atBatIndex'))
+                            
+            if play.get('about').get('isComplete') and play.get('result').get('type')=='atBat' \
+              and ((battingTeam =='myTeam' and play.get('result').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
+              or (battingTeam =='oppTeam' and play.get('result').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS')) \
+              or (battingTeam =='myTeam' and play.get('about').get('isScoringPlay') and 'Scoring Play' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
+              or (battingTeam =='oppTeam' and play.get('about').get('isScoringPlay') and 'Scoring Play' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
+                if {play.get('result').get('event','') : play.get('result').get('description')} not in self.gamesComments.get(play.get('about').get('atBatIndex')):
+                    notablePlays.append({'battingTeam':battingTeam, 'type':'play', 'play':play, 'about':play.get('about')})
+                    self.gamesComments[play.get('about').get('atBatIndex')].append({play.get('result').get('event','') : play.get('result').get('description')})
+                else:
+                    logging.debug("Result event %s for atBatIndex %s already commented.", play.get('result').get('event',''), play.get('about').get('atBatIndex'))
+            self.games[gameid]['atBatIndex'].update({'id':play.get('about').get('atBatIndex'), 'actions':play.get('actions'), 'pitches':play.get('pitches')})
+            #logging.debug("gamesComments for atBatIndex %s: %s.", play.get('about').get('atBatIndex'), self.gamesComments.get(play.get('about').get('atBatIndex')))
+        logging.debug("atBatIndex for Game %s: %s", gameid, self.games[gameid]['atBatIndex'])
+        return notablePlays
+
+    def generate_notable_play_comment(self,gameid):
+        comment_text = ""
+        counts=[]
+        events = self.get_notable_plays(gameid)
+        for play in events:
+            if comment_text != "": comment_text += "\n\n---\n\n"
+            if play.get('type') == 'event':
+                if play.get('event').get('details').get('event') == 'Strikeout' and not any(x in play.get('event').get('details').get('event') for x in ['swinging','foul','missed','bunt']):
+                    play['event']['details'].update({'event':'Strikeout_Called'})
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get('All'):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get('All'):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get(play.get('event').get('details').get('event')):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get(play.get('event').get('details').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get(play.get('event').get('details').get('event')):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get(play.get('event').get('details').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+
+                comment_text += play.get('event').get('details').get('description')
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('event').get('details').get('event')):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('event').get('details').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get(play.get('event').get('details').get('event')):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get(play.get('event').get('details').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get('All'):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get('All'):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+
+                if comment_text[0:comment_text.find('\n\n---\n\n')] == comment_text[comment_text.find('\n\n---\n\n')+len('\n\n---\n\n'):]:
+                    logging.debug("De-duplicating notable play comment text... Events from get_notable_plays(): %s",events)
+                    comment_text = comment_text[0:comment_text.find('\n\n---\n\n')] # remove duplicate event from the comment
+                counts.append({'stamp':datetime.today().strftime('%Y-%m-%d %H:%M:%S'), 'event': play.get('event').get('details').get('event')})
+            elif play.get('type') == 'play':
+                if play.get('play').get('result').get('event') == 'Strikeout' and not any(x in play.get('play').get('result').get('description') for x in ['swinging','foul','missed','bunt']):
+                    play['play']['result'].update({'event':'Strikeout_Called'})
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get('All'):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get('All'):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get(play.get('play').get('result').get('event')):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('HEADER').get(play.get('play').get('result').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get(play.get('play').get('result').get('event')):
+                    comment_text += self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('HEADER').get(play.get('play').get('result').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid) + "\n\n"
+
+                comment_text += play.get('play').get('result').get('description')
+
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('PITCH_STATS') and len(play.get('play').get('pitches')):
+                    #get pitch stats
+                    try:
+                        pitchType = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('details',{}).get('displayName','unknown')
+                        startSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('startSpeed','-')
+                        endSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('endSpeed','-')
+                        nastyFactor = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('nastyFactor','-')
+                        comment_text += "\n\nPitch Type: " + pitchType + "\n\nStart Speed: " + startSpeed + "\n\nEnd Speed: " + endSpeed + "\n\nNasty Factor: " + nastyFactor
+                    except:
+                        logging.error("Error adding pitch stats to notable play comment (ID: %s, Type: %s, Event: %s).", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'))
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('HIT_STATS') and len(play.get('play').get('pitches')):
+                    #get hit stats
+                    try:
+                        launchSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('launchSpeed','unknown')
+                        launchAngle = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('launchAngle','unknown')
+                        totalDistance = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('totalDistance','unknown')
+                        comment_text += "\n\nLaunch Speed: " + launchSpeed + "\n\nLaunch Angle: " + launchAngle + "\n\nTotal Distance: " + totalDistance
+                    except:
+                        logging.error("Error adding hit stats to notable play comment (ID: %s, Type: %s, Event: %s).", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'))
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('play').get('result').get('event')):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('play').get('result').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get(play.get('play').get('result').get('event')):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get(play.get('play').get('result').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+
+                if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get('All'):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+                elif play.get('battingTeam','')=='myTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get('All'):
+                    comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('FOOTER').get('All')).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',play.get('about').get('inning')),'notable_play','comment',gameid)
+
+                if comment_text[0:comment_text.find('\n\n---\n\n')] == comment_text[comment_text.find('\n\n---\n\n')+len('\n\n---\n\n'):]:
+                    logging.debug("De-duplicating notable play comment text... Events from get_notable_plays(): %s",events)
+                    comment_text = comment_text[0:comment_text.find('\n\n---\n\n')] # event duplicated - not sure why this happens
+                counts.append({'stamp':datetime.today().strftime('%Y-%m-%d %H:%M:%S'), 'event': play.get('play').get('result').get('event')})
+
+        if comment_text == "": logging.debug("Returning notable play comment (none)...")
+        else: logging.debug("Returning notable play comment for %s play(s)...",len(events))
+
+        return comment_text, counts
+
     def generate_highlights(self,gameid,theater_link=False):
         highlights = ""
         gameContent = self.api_download(self.games[gameid].get('content').get('link'),False,5)
@@ -1128,14 +1278,14 @@ class Editor:
         myteam = self.lookup_team_info('all','team_code',self.SETTINGS.get('TEAM_CODE'))
         standings = self.get_standings(divisionId=int(myteam.get('division_id')))
         i=1
-        code += "|"+myteam.get('division_abbrev',' ')+" Rank|Team|Wins|Losses|Games Back|Wild Card Rank|Wild Card Games Back|\n"
+        code += "|"+myteam.get('division_abbrev',' ')+" Rank|Team|Wins|Losses|Games Back (E#)|Wild Card Rank|Wild Card Games Back (E#)|\n"
         code += "|:--|:--|:--|:--|:--|:--|:--|\n"
         for z in standings.get('teams',{}):
             sub = self.lookup_team_info('sub','team_id',str(z.get('team',{}).get('id',0)))
             if z.get('team',{}).get('id') == int(myteam.get('team_id')):
-                code += "|**"+str(i)+"**|**["+z.get('team',{}).get('name')+"]("+sub+")**|**"+str(z.get('wins','-'))+"**|**"+str(z.get('losses','-'))+"**|**"+str(z.get('divisionGamesBack','-'))+"**|**"+str(z.get('wildCardRank','-'))+"**|**"+str(z.get('wildCardGamesBack','-'))+"**|\n"
+                code += "|**"+str(i)+"**|**["+z.get('team',{}).get('name')+"]("+sub+")**|**"+str(z.get('wins','-'))+"**|**"+str(z.get('losses','-'))+"**|**"+str(z.get('divisionGamesBack','-'))+" ("+str(z.get('eliminationNumber','-'))+")**|**"+str(z.get('wildCardRank','-'))+"**|**"+str(z.get('wildCardGamesBack','-'))+" ("+str(z.get('wildCardEliminationNumber','-'))+")**|\n"
             else:
-                code += "|"+str(i)+"|["+z.get('team',{}).get('name')+"]("+sub+")|"+str(z.get('wins','-'))+"|"+str(z.get('losses','-'))+"|"+str(z.get('divisionGamesBack','-'))+"|"+str(z.get('wildCardRank','-'))+"|"+str(z.get('wildCardGamesBack','-'))+"|\n"
+                code += "|"+str(i)+"|["+z.get('team',{}).get('name')+"]("+sub+")|"+str(z.get('wins','-'))+"|"+str(z.get('losses','-'))+"|"+str(z.get('divisionGamesBack','-'))+" ("+str(z.get('eliminationNumber','-'))+")|"+str(z.get('wildCardRank','-'))+"|"+str(z.get('wildCardGamesBack','-'))+" ("+str(z.get('wildCardEliminationNumber','-'))+")|\n"
             i+=1
         if code != "|"+myteam.get('division_abbrev','')+" Rank|Team|Wins|Losses|Games Back|Wild Card Rank|Wild Card Games Back|\n|:--|:--|:--|:--|:--|:--|:--|\n":
             logging.debug("Returning standings...")

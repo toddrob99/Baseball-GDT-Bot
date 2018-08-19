@@ -97,6 +97,81 @@
             "PREVIEW_PROBABLES": true,
             "NEXT_GAME": true
         },
+        "NOTABLE_PLAY_COMMENTS": {
+            "ENABLED": false,
+            "MYTEAM_BATTING": {
+                "EVENTS": ["Home Run", "Single", "Double", "Triple", "Pitching Substitution", "Balk", "Walk", "Intent Walk", "Offensive Sub", "Manager Review", "Hit By Pitch", "Scoring Play", "Stolen Base 2B", "Stolen Base 3B", "Stolen Base Home", "Passed Ball", "Wild Pitch"],
+                "HEADER": {
+                    "All":"",
+                    "Home Run": "##{myTeam:name%upper} HOME RUN!",
+                    "Single": "###SINGLE",
+                    "Double": "###DOUBLE",
+                    "Triple": "###TRIPLE",
+                    "Pitching Substitution": "###NEW PITCHER FOR THE {oppTeam:name%upper}",
+                    "Intent Walk": "###FREE PASS",
+                    "Walk": "###WALK",
+                    "Balk": "###BALK",
+                    "Offensive Sub": "###OFFENSIVE SUBSTITUTION FOR THE {myTeam:name%upper}",
+                    "Manager Review": "###MANAGER REVIEW",
+                    "Hit By Pitch": "###HIT BATSMAN",
+                    "Stolen Base 2B": "###STOLEN BASE",
+                    "Stolen Base 3B": "###STOLEN BASE",
+                    "Stolen Base Home": "###STOLEN BASE",
+                    "Passed Ball": "###PASSED BALL",
+                    "Wild Pitch": "###WILD PITCH"
+                },
+                "FOOTER": {
+                    "All": "{halfInning} {inning} - {awayTeam:name}: {awayTeam:runs}, {homeTeam:name}: {homeTeam:runs}",
+                    "Home Run": "",
+                    "Single": "",
+                    "Double": "",
+                    "Triple": "",
+                    "Pitching Substitution": "",
+                    "Intent Walk": "",
+                    "Walk": "",
+                    "Balk": "",
+                    "Offensive Sub": "",
+                    "Manager Review": "",
+                    "Hit By Pitch": "",
+                    "Stolen Base 2B": "",
+                    "Stolen Base 3B": "",
+                    "Stolen Base Home": "",
+                    "Passed Ball": "",
+                    "Wild Pitch": ""
+                }
+            },
+            "MYTEAM_PITCHING": {
+                "EVENTS": ["Strikeout", "Strikeout_Called", "Double Play", "Triple Play", "Pitching Substitution", "Offensive Sub", "Manager Review", "Caught Stealing 2B", "Caught Stealing 3B", "Caught Stealing Home", "Pickoff 1B", "Pickoff 2B", "Pickoff 3B"],
+                "HEADER": {
+                    "All": "",
+                    "Strikeout": "###K",
+                    "Strikeout_Called": "###BACKWARD K",
+                    "Double Play": "###DOUBLE PLAY",
+                    "Triple Play": "##TRIPLE PLAY!",
+                    "Pitching Substitution": "###NEW PITCHER FOR THE {myTeam:name%upper}",
+                    "Offensive Sub": "###OFFENSIVE SUBSTITUTION FOR THE {oppTeam:name%upper}",
+                    "Manager Review": "###MANAGER REVIEW",
+                    "Caught Stealing 2B": "###CAUGHT STEALING",
+                    "Caught Stealing 3B": "###CAUGHT STEALING",
+                    "Caught Stealing Home": "###CAUGHT STEALING"
+                },
+                "FOOTER": {
+                    "All": "{halfInning} {inning} - {awayTeam:name}: {awayTeam:runs}, {homeTeam:name}: {homeTeam:runs}",
+                    "Strikeout": "",
+                    "Strikeout_Called": "",
+                    "Double Play": "",
+                    "Triple Play": "",
+                    "Pitching Substitution": "",
+                    "Offensive Sub": "",
+                    "Manager Review": "",
+                    "Caught Stealing 2B": "",
+                    "Caught Stealing 3B": "",
+                    "Caught Stealing Home": ""
+                }
+            },
+            "PITCH_STATS": ["Strikeout_Called", "Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Hit By Pitch", "Home Run", "Lineout", "Passed Ball", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Strikeout", "Strikeout - DP", "Triple", "Triple Play", "Walk", "Wild Pitch"],
+            "HIT_STATS": ["Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Home Run", "Lineout", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Triple", "Triple Play"]
+        },
         "TWITTER": {
             "ENABLED": false,
             "TEXT": "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}",

@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.5.1
+### Current Version: 5.1.6
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -84,7 +84,7 @@ The following settings can be configured in `/src/settings.json`:
 * `PRE_THREAD` - pregame thread settings
 	* `ENABLED` - do you want a pre game thread? (true/false)
 	* `TITLE` - thread title (Default: "PREGAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
-		* Team-related fields available through `lookup_team_info()` can be used in the below formats (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). In addition to `wins`, `losses`, and `runs` (postgame only), list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27&all_star_sw=%27N%27
+		* Team-related fields available through `lookup_team_info()` can be used in the below formats (e.g. `{myTeam:name}` for `Phillies`, `{myTeam:name_display_full}` for `Philadelphia Phillies`). In addition to `wins`, `losses`, and `runs` (postgame only), list of team fields is located at http://mlb.com/lookup/json/named.team_all.bam?sport_code=%27mlb%27&active_sw=%27Y%27
 			* `{myTeam:<field>}` - fields related to team configured in `TEAM_CODE` setting (`myTeam` is the only team parameter available for off day thread)
 			* `{oppTeam:<field>}` - fields related to opponent team
 			* `{homeTeam:<field>}` - fields related to home team
@@ -137,6 +137,31 @@ The following settings can be configured in `/src/settings.json`:
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
 		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
 		* `NEXT_GAME` - include next game date/time/opponent in the game thread after the game is final (true/false)
+	* `NOTABLE_PLAY_COMMENTS` - settings that control whether the bot comments on the game thread when specific game events occur
+		* `ENABLED` - do you want the bot to comment on game threads when configured game events occur? (true/false)
+		* `MYTEAM_BATTING` - settings that control comments submitted to game thread by bot while configured team is batting
+			* `EVENTS` - list of events for which the bot should submit a comment while the configured team is batting, in list format (e.g. `["Home Run", "Balk", "Scoring Play"]`). Default value: `["Home Run", "Pitcher Substitution", "Scoring Play", "Stolen Base Home"]`. All events that have occurred in 2018 as of August 3: `["Balk", "Batter Interference", "Batter Turn", "Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Catcher Interference", "Caught Stealing 2B", "Caught Stealing 3B", "Caught Stealing Home", "Defensive Indiff", "Defensive Sub", "Defensive Switch", "Double", "Double Play", "Ejection", "Error", "Fan interference", "Field Error", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Game Advisory", "Grounded Into DP", "Groundout", "Hit By Pitch", "Home Run", "Intent Walk", "Left On Base", "Lineout", "Manager Review", "Offensive Sub", "Passed Ball", "Picked off stealing 2B", "Picked off stealing 3B", "Picked off stealing home", "Pickoff 1B", "Pickoff 2B", "Pickoff 3B", "Pickoff Attempt 1B", "Pickoff Attempt 2B", "Pickoff Error 1B", "Pickoff Error 2B", "Pitcher Switch", "Pitching Substitution", "Player Injured", "Pop Out", "Relief with No Outs", "Runner Advance", "Runner Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Stolen Base 2B", "Stolen Base 3B", "Stolen Base Home", "Strikeout", "Strikeout - DP", "Triple", "Triple Play", "Umpire Review", "Umpire Substitution", "Walk", "Wild Pitch"]`.
+			* `HEADER` - optional text to include at the beginning of the comment (before the event description). Include an item for each event you want a header for. All parameters supported in thread titles/tweets are supported, e.g. `{myTeam:name}`, plus `{halfInning}` (`Top` or `Bottom`) and `{inning}` (`1`, `2`, etc. with no ordinal). A couple examples of the format are below; see `sample_settings.json` for more examples.
+				* `"All": "###Notable Play Alert!"` - note the special value `All` which applies to all events. this will be prepended before any event-specific header
+				* `"Home Run": "##RING THE BELL!",`
+				* `"Double": "###DOUBLE",`
+				* `"Scoring Play": "###SCORING PLAY"` - note the special event name for any scoring play. Could be a single, sac fly, home run, walk, stolen base, etc. If this event is enabled, any event that is a scoring play will trigger a comment
+			* `FOOTER` - optional text to include at the end of the comment (after the event description). Include an item for each event you want a footer for. All parameters supported in thread titles/tweets are supported, e.g. `{myTeam:name}`, plus `{halfInning}` (`Top` or `Bottom`) and `{inning}` (`1`, `2`, etc. with no ordinal). A couple examples of the format are below; see `sample_settings.json` for more examples.
+				* `"All": "{halfInning} {inning} - {awayTeam:name}: {awayTeam:runs}, {homeTeam:name}: {homeTeam:runs}"` - note the special value `All` which applies to all events. this will be appended after any event-specific footer
+				* `"Home Run": "That ball's outta here!",`
+				* `"Triple": "He made it all the way to third base."`
+		* `MYTEAM_PITCHING` - settings that control comments submitted to game thread by bot while configured team is pitching
+			* `EVENTS` - list of events for which the bot should submit a comment while the configured team is pitching, in list format (`["Strikeout", "Strikeout_Called", "Triple Play"]`). Default value: `["Pitcher Substitution", "Strikeout", "Strikeout_Called", "Triple Play"]`. A list of events that have occurred in 2018 as of August 3 is in the previous section
+			* `HEADER` - optional text to include at the beginning of the comment (before the event description). Include an item for each event you want a header for. All parameters supported in thread titles/tweets are supported, e.g. `{myTeam:name}`, plus `{halfInning}` (`Top` or `Bottom`) and `{inning}` (`1`, `2`, etc. with no ordinal). A couple examples of the format are below; see `sample_settings.json` for more examples.
+				* `"All": "###Notable Play Alert!"` - note the special value `All` which applies to all events. this will be prepended before any event-specific header
+				* `"Strikeout": "###K"`
+				* `"Strikeout_Called": "###BACKWARD K"` - note the special event name for a called strikeout, vs. a swinging strikeout
+			* `FOOTER` - optional text to include at the end of the comment (before the event description). Include an item for each event you want a footer for. All parameters supported in thread titles/tweets are supported, e.g. `{myTeam:name}`, plus `{halfInning}` (`Top` or `Bottom`) and `{inning}` (`1`, `2`, etc. with no ordinal). A couple examples of the format are below; see `sample_settings.json` for more examples.
+				* `"All": "{halfInning} {inning} - {awayTeam:name}: {awayTeam:runs}, {homeTeam:name}: {homeTeam:runs}"` - note the special value `All` which applies to all events. this will be appended after any event-specific footer
+				* `"Strikeout": ""`
+				* `"Strikeout_Called": "He was caught looking..."` - note the special event name for a called strikeout, vs. a swinging strikeout
+		* `PITCH_STATS` - list of events that you want to have pitch stats in the comment (pitch type, start speed, end speed, nasty factor). Default value: `["Strikeout_Called", "Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Hit By Pitch", "Home Run", "Lineout", "Passed Ball", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Strikeout", "Strikeout - DP", "Triple", "Triple Play", "Walk", "Wild Pitch"]`
+        * `HIT_STATS` list of events that you want to have hit stats int he comment (launch angle, launch speed, total distance). Default value: `["Bunt Groundout", "Bunt Lineout", "Bunt Pop Out", "Double", "Fielders Choice", "Fielders Choice Out", "Flyout", "Forceout", "Grounded Into DP", "Groundout", "Home Run", "Lineout", "Pop Out", "Sac Bunt", "Sac Fly", "Sac Fly DP", "Sacrifice Bunt DP", "Single", "Triple", "Triple Play"]`
 	* `TWITTER` - settings for tweeting game thread link
 		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
 		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }{awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%I:%M%p %Z}. Join the discussion in our game thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
@@ -184,6 +209,15 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.6
+* Added support for the bot to comment on game threads when specific events occur. This feature is OFF by default. All events that have occurred in 2018 through August 3 are in `README.md` under the description for `GAME_THREAD` : `NOTABLE_PLAY_COMMENTS` : `MYTEAM_BATTING` : `EVENTS`, and any other events you come across can be configured. Configuration allows bot-runner to decide which events will trigger comments when the configured team is batting or pitching, and a header and footer can be configured for each event--with same substitution parameters as thread titles and tweets, plus `{halfInning}` (`Top`/`Bottom`) and `{inning}` (`1`, `2`, etc.). Configure using the new `GAME_THREAD` : `NOTABLE_PLAY_COMMENTS` setting section. See above in readme for explanation of settings, or copy from `sample_settings.json` and modify as needed.
+* Enhanced `replace_params()` to support notable play comments, including supporting runs while the game is in progress (previous only worked after the game is final)
+* Added functions to support notable play comments: `get_latest_atBatIndex()`, `get_notable_plays()`, and `generate_notable_play_comment()`
+* Added comment count to daily and average game thread stats logging and Prowl notifications (not broken down by event type yet)
+* Added max utilization of Reddit API to daily game thread stats logging and Prowl notifications. Reddit API allows 600 calls per 10 minute period, so if this regularly gets near 600, you should increase the `GAME_THREAD` : `EXTRA_SLEEP` setting. The bot will also take a break automatically if the limit is approaching. I have never seen it anywhere near 600.
+* Added `E#` (elimination number aka magic number) to standings table in pre/off threads
+* Fixed failure to validate some ASG-related settings
 
 #### v5.1.5.1
 * Fixed two errors related to `POST_THREAD_SUBMITTED` Prowl notification

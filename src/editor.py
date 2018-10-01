@@ -1227,8 +1227,8 @@ class Editor:
                 next += " vs " + next_game.get('away_team_name')
             if next_game.get('series') and next_game.get('series_num') and next_game.get('gameType') != 'R':
                 next += " (" + next_game.get('series') 
-                if next_game.get('series_num') != '0' and next_game.get('gameType') not in ['I', 'E', 'S','R']:
-                    next += " Game " + next_game.get('series_num')
+                if str(next_game.get('series_num')) != '0' and next_game.get('gameType') not in ['I', 'E', 'S','R', 'F']:
+                    next += " Game " + str(next_game.get('series_num'))
                 next += ")"
             logging.debug("Returning next game...")
             return next

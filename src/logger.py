@@ -24,10 +24,10 @@ class Logger(object):
                                                                             when='midnight',interval=1,backupCount=7)
                     fileHandler.setLevel(fileLogLevel)
                     if loggerName == 'startup':
-                        formatter = logging.Formatter('%(asctime)s :: %(process)d :: %(levelname)8s :: '+loggerName+'-%(module)s :: %(funcName)s :: %(message)s',
+                        formatter = logging.Formatter('%(asctime)s :: %(process)d :: %(levelname)8s :: '+loggerName+'-%(module)s(%(lineno)d) :: %(funcName)s :: %(message)s',
                                                     datefmt='%Y-%m-%d %I:%M:%S %p')
                     else:
-                        formatter = logging.Formatter('%(asctime)s :: %(levelname)8s :: '+loggerName+'-%(module)s :: %(funcName)s :: %(message)s',
+                        formatter = logging.Formatter('%(asctime)s :: %(levelname)8s :: '+loggerName+'-%(module)s(%(lineno)d) :: %(funcName)s :: %(message)s',
                                                     datefmt='%Y-%m-%d %I:%M:%S %p')
                     fileHandler.setFormatter(formatter)
                     self.rootLogger.addHandler(fileHandler)
@@ -44,7 +44,7 @@ class Logger(object):
             console = logging.StreamHandler(sys.stdout)
             consoleLogLevel = getattr(logging, logOptions.get('CONSOLE_LOG_LEVEL').upper(),30)
             console.setLevel(consoleLogLevel)
-            formatter = logging.Formatter('%(asctime)s :: %(levelname)8s :: '+loggerName+'-%(module)s :: %(funcName)s :: %(message)s',
+            formatter = logging.Formatter('%(asctime)s :: %(levelname)8s :: '+loggerName+'-%(module)s(%(lineno)d) :: %(funcName)s :: %(message)s',
                                             datefmt='%Y-%m-%d %I:%M:%S %p')
             console.setFormatter(formatter)
             self.rootLogger.addHandler(console)

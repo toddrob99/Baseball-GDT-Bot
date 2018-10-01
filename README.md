@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.6
+### Current Version: 5.1.7
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -209,6 +209,10 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.7
+* Fixed bug when next game is a Wild Card game
+* Added line number to logs
 
 #### v5.1.6
 * Added support for the bot to comment on game threads when specific events occur. This feature is OFF by default. All events that have occurred in 2018 through August 3 are in `README.md` under the description for `GAME_THREAD` : `NOTABLE_PLAY_COMMENTS` : `MYTEAM_BATTING` : `EVENTS`, and any other events you come across can be configured. Configuration allows bot-runner to decide which events will trigger comments when the configured team is batting or pitching, and a header and footer can be configured for each event--with same substitution parameters as thread titles and tweets, plus `{halfInning}` (`Top`/`Bottom`) and `{inning}` (`1`, `2`, etc.). Configure using the new `GAME_THREAD` : `NOTABLE_PLAY_COMMENTS` setting section. See above in readme for explanation of settings, or copy from `sample_settings.json` and modify as needed.

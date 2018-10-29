@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.7'
+        self.VERSION = '5.1.8'
         self.games = games.Games().games
         self.editStats = {}
         self.editStatHistory = []
@@ -50,6 +50,7 @@ class Bot:
 
         stale_games = {}
         offday = {}
+        weekly = {}
         threads = {}
         offseason = False
         UA = None
@@ -117,7 +118,7 @@ class Bot:
                     logger.info("Marking yesterday's threads as stale...")
                     stale_games = self.games.copy()
             if conf.SETTINGS.get('STICKY') and len(stale_games)==0:
-                dateformats = []
+                dateformats = ["%B %d, %Y"]
                 if conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:') > -1:
                     dateformats.append(conf.SETTINGS.get('OFF_THREAD').get('TITLE')[conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:')+6:conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('}',conf.SETTINGS.get('OFF_THREAD').get('TITLE').find('{date:'))])
                 if conf.SETTINGS.get('PRE_THREAD').get('TITLE').find('{date:') > -1:
@@ -130,7 +131,8 @@ class Bot:
                     dateformats.append(conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')[conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:')+6:conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('}',conf.SETTINGS.get('POST_THREAD').get('LOSS_TITLE').find('{date:'))])
                 if conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:') > -1:
                     dateformats.append(conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE')[conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:')+6:conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('}',conf.SETTINGS.get('POST_THREAD').get('OTHER_TITLE').find('{date:'))])
-                if len(dateformats)==0: dateformats = ["%B %d, %Y"]
+                if conf.SETTINGS.get('WEEKLY_THREAD').get('TITLE').find('{date:') > -1:
+                    dateformats.append(conf.SETTINGS.get('WEEKLY_THREAD').get('TITLE')[conf.SETTINGS.get('WEEKLY_THREAD').get('TITLE').find('{date:')+6:conf.SETTINGS.get('WEEKLY_THREAD').get('TITLE').find('}',conf.SETTINGS.get('WEEKLY_THREAD').get('TITLE').find('{date:'))])
                 dateformats = list(set(dateformats))
                 datestocheck = []
                 for f in dateformats:
@@ -243,6 +245,136 @@ class Bot:
                 else:
                     logger.info("No games today...")
                     offseason = False
+
+            if conf.SETTINGS.get('WEEKLY_THREAD').get('ENABLED') and ((offseason and conf.SETTINGS.get('WEEKLY_THREAD').get('OFFSEASON_ONLY')) or not conf.SETTINGS.get('WEEKLY_THREAD').get('OFFSEASON_ONLY')):
+                try:
+                    weekly.update({'weeklytitle': edit.generate_title(0,"weekly",usedate=timechecker.dateoflastweekly()), 'weeklymessage' : edit.generate_thread_code('weekly',0,offseason=offseason)})
+                    subreddit = r.subreddit(conf.SETTINGS.get('SUBREDDIT'))
+                    if not weekly.get('weeklysub'):
+                        for submission in subreddit.new():
+                            if submission.title == weekly.get('weeklytitle') and timechecker.iscurrent('weekly',submission.created_utc,6):
+                                logger.info("Found a weekly thread with matching title posted within the last 6 days, getting submission...")
+                                weekly.update({'weeklysub' : submission})
+                                if len(stale_games):
+                                    for stk,stg in stale_games.items():
+                                        if stg.get('weeklysub') == weekly.get('weeklysub') or stg.get('gamesub') == weekly.get('weeklysub'):
+                                            logger.info("Weekly thread was marked as stale, marking as active again...")
+                                            stale_games.pop(stk)
+                                            logger.debug("stale_games: %s",stale_games)
+                                if conf.SETTINGS.get('STICKY'):
+                                    logger.info("Stickying submission...")
+                                    try:
+                                        weekly.get('weeklysub').mod.sticky()
+                                        logger.info("Submission stickied...")
+                                    except:
+                                        logger.warn("Sticky of weekly thread failed (check mod privileges or the thread may have already been sticky), continuing...")
+                                break
+                        if not weekly.get('weeklysub'):
+                            logger.info("No existing weekly thread found.")
+
+                    if timechecker.weeklycheck():
+                        if weekly.get('weeklysub') and weekly.get('weeklysub').title != weekly.get('weeklytitle'):
+                            logger.info("Marking previous weekly thread as stale...")
+                            stale_games[len(stale_games)] = {'weeklysub' : weekly.get('weeklysub'), 'gametitle' : weekly.get('weeklysub').title}
+                            weekly.pop('weeklysub')
+
+                        if not weekly.get('weeklysub'):
+                            if conf.SETTINGS.get('STICKY') and len(stale_games):
+                                logger.info("Unstickying stale threads...")
+                                try:
+                                    for stale_k,stale_game in stale_games.items():
+                                        if stale_game.get('offsub') and offseason and conf.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON'):
+                                            stale_game.get('offsub').mod.sticky(state=False)
+                                            stale_games.pop(stale_k)
+                                            continue
+                                        if stale_game.get('presub') and offseason:
+                                            stale_game.get('presub').mod.sticky(state=False)
+                                            stale_games.pop(stale_k)
+                                            continue
+                                        if stale_game.get('gamesub') and offseason:
+                                            stale_game.get('gamesub').mod.sticky(state=False)
+                                            stale_games.pop(stale_k)
+                                            continue
+                                        if stale_game.get('postsub') and offseason:
+                                            stale_game.get('postsub').mod.sticky(state=False)
+                                            stale_games.pop(stale_k)
+                                            continue
+                                        if stale_game.get('weeklysub'):
+                                            stale_game.get('weeklysub').mod.sticky(state=False)
+                                            stale_games.pop(stale_k)
+                                            continue
+                                    logger.debug("stale_games: %s",stale_games)
+                                except Exception, err:
+                                    logger.error("Unsticky of stale posts failed, continuing...")
+
+                            logger.info("Submitting weekly thread...")
+                            weekly.update({'weeklysub' : subreddit.submit(weekly.get('weeklytitle'), selftext=weekly.get('weeklymessage'), send_replies=conf.SETTINGS.get('WEEKLY_THREAD').get('INBOX_REPLIES'))})
+                            logger.info("Weekly thread submitted...")
+
+                            if conf.SETTINGS.get('STICKY'):
+                                logger.info("Stickying submission...")
+                                try:
+                                    weekly.get('weeklysub').mod.sticky()
+                                    logger.info("Submission stickied...")
+                                except:
+                                    logger.warn("Sticky of weekly thread failed (check mod privileges or the thread may have already been sticky), continuing...")
+
+                            if conf.SETTINGS.get('FLAIR_MODE') == 'submitter':
+                                if conf.SETTINGS.get('WEEKLY_THREAD').get('FLAIR') == "":
+                                    logger.error("FLAIR_MODE = submitter, but WEEKLY_THREAD : FLAIR is blank...")
+                                else:
+                                    logger.info("Adding flair to submission as submitter...")
+                                    choices = weekly.get('weeklysub').flair.choices()
+                                    flairsuccess = False
+                                    for p in choices:
+                                        if p['flair_text'] == conf.SETTINGS.get('WEEKLY_THREAD').get('FLAIR'):
+                                            weekly.get('weeklysub').flair.select(p['flair_template_id'])
+                                            flairsuccess = True
+                                    if flairsuccess:
+                                        logger.info("Submission flaired...")
+                                    else: 
+                                        logger.error("Flair not set: could not find flair in available choices")
+                            elif conf.SETTINGS.get('FLAIR_MODE') == 'mod':
+                                if conf.SETTINGS.get('WEEKLY_THREAD').get('FLAIR') == "":
+                                    logger.error("FLAIR_MODE = mod, but WEEKLY_THREAD : FLAIR is blank...")
+                                else:
+                                    logger.info("Adding flair to submission as mod...")
+                                    try:
+                                        weekly.get('weeklysub').mod.flair(conf.SETTINGS.get('WEEKLY_THREAD').get('FLAIR'))
+                                        logger.info("Submission flaired...")
+                                    except:
+                                        logger.error("Failed to set flair (check mod privileges or change FLAIR_MODE to submitter), continuing...")
+
+                            if conf.SETTINGS.get('WEEKLY_THREAD').get('SUGGESTED_SORT') != "":
+                                logger.info("Setting suggested sort to %s...",conf.SETTINGS.get('WEEKLY_THREAD').get('SUGGESTED_SORT'))
+                                try:
+                                    weekly.get('weeklysub').mod.suggested_sort(conf.SETTINGS.get('WEEKLY_THREAD').get('SUGGESTED_SORT'))
+                                    logger.info("Suggested sort set...")
+                                except:
+                                    logger.error("Setting suggested sort on weekly thread failed (check mod privileges), continuing...")
+
+                            if conf.SETTINGS.get('WEEKLY_THREAD').get('TWITTER').get('ENABLED'):
+                                logger.info("Preparing to tweet link to weekly thread...")
+                                tweetText = edit.replace_params(conf.SETTINGS.get('WEEKLY_THREAD').get('TWITTER').get('TEXT').replace('{link}',weekly.get('weeklysub').shortlink), 'weekly', 'tweet')
+                                twt.PostUpdate(tweetText)
+                                logger.info("Tweet submitted...")
+
+                            if conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('ENABLED') and conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('NOTIFY_WHEN').get('WEEKLY_THREAD_SUBMITTED'):
+                                logger.info("Sending Prowl notification...")
+                                event = myteam.get('name') + ' Weekly Thread Posted'
+                                description = myteam.get('name') + ' weekly thread was posted to r/'+conf.SETTINGS.get('SUBREDDIT')+' at '+edit.convert_tz(datetime.utcnow(),'bot').strftime('%I:%M %p %Z')+'.\nThread title: '+weekly.get('weeklytitle')+'\nURL: '+weekly.get('weeklysub').shortlink
+                                try:
+                                    prowlResult = prowl.notify(event, description, conf.SETTINGS.get('NOTIFICATIONS').get('PROWL').get('PRIORITY'), weekly.get('weeklysub').shortlink)
+                                    logger.info("Successfully sent notification to Prowl...")
+                                except Exception, e:
+                                    logger.error("Failed to send notification to Prowl... Event: %s, Description: %s, Response: %s", event, description, e)
+
+                            logger.info("Finished posting weekly thread, sleeping for 5 seconds and then checking if anything else is needed...")
+                            time.sleep(5)
+                    elif not weekly.get('weeklysub'):
+                        logger.info("It's not time to post the weekly thread...")
+                except Exception, err:
+                    logger.info("Error posting weekly thread, continuing: %s",err)
 
             if conf.SETTINGS.get('OFF_THREAD').get('ENABLED') and len(self.games) == 0 and not (offseason and conf.SETTINGS.get('OFF_THREAD').get('SUPPRESS_OFFSEASON')):
                 timechecker.pregamecheck(conf.SETTINGS.get('OFF_THREAD').get('TIME'))

@@ -244,6 +244,7 @@ class Config:
                                         "PRE_THREAD_SUBMITTED": {"default":True,"type":"bool","critical":False},
                                         "GAME_THREAD_SUBMITTED": {"default":True,"type":"bool","critical":False},
                                         "POST_THREAD_SUBMITTED": {"default":True,"type":"bool","critical":False},
+                                        "WEEKLY_THREAD_SUBMITTED": {"default":True,"type":"bool","critical":False},
                                         "END_OF_DAY_EDIT_STATS": {"default":True,"type":"bool","critical":False}
                                     }
                                 }
@@ -295,6 +296,7 @@ class Config:
                                 "TITLE": {"default":"GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}","type":"str","critical":False},
                                 "ASG_TITLE": {"default":"GAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}","type":"str","critical":False},
                                 "HOURS_BEFORE": {"default":3,"type":"int","critical":False},
+                                "POST_BY": {"default":"10PM","type":"str","critical":False},
                                 "SUGGESTED_SORT": {"default":"new","type":"str","critical":False,"options":["confidence","top","new","controversial","old","random","qa",""]},
                                 "INBOX_REPLIES": {"default":False,"type":"bool","critical":False},
                                 "FLAIR": {"default":"","type":"str","critical":False},
@@ -314,6 +316,7 @@ class Config:
                                     "THEATER_LINK": {"default":False,"type":"bool","critical":False},
                                     "PREVIEW_BLURB": {"default":True,"type":"bool","critical":False},
                                     "PREVIEW_PROBABLES": {"default":True,"type":"bool","critical":False},
+                                    "PREVIEW_STANDINGS": {"default":True,"type":"bool","critical":False},
                                     "NEXT_GAME": {"default":True,"type":"bool","critical":False}
                                 },
                                 "NOTABLE_PLAY_COMMENTS": {"default":{},"type":"dict","critical":False,"children":["ENABLED","MYTEAM_BATTING","MYTEAM_PITCHING","PITCH_STATS","HIT_STATS"],
@@ -365,11 +368,27 @@ class Config:
                                     "ASG_TEXT": {"default":"{series:%D - }The discussion continues in our postgame thread: {link} #MLBAllStarGame #ASG{date:%Y}","type":"str","critical":False}
                                 }
                             },
+                            "WEEKLY_THREAD": {"default":{},"type":"dict","critical":False,"children":["ENABLED","OFFSEASON_ONLY","WEEK_START","TITLE","SUGGESTED_SORT","INBOX_REPLIES","FLAIR","CONTENT","TWITTER"],
+                                "ENABLED": {"default":True,"type":"bool","critical":False},
+                                "OFFSEASON_ONLY": {"default":True,"type":"bool","critical":False},
+                                "WEEK_START": {"default":"Monday","type":"str","critical":False,"options":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]},
+                                "TITLE": {"default":"Weekly {sub} Offseason Discussion Thread - {date:%B %d, %Y}","type":"str","critical":False},
+                                "SUGGESTED_SORT": {"default":"new","type":"str","critical":False,"options":["confidence","top","new","controversial","old","random","qa",""]},
+                                "INBOX_REPLIES": {"default":False,"type":"bool","critical":False},
+                                "FLAIR": {"default":"","type":"str","critical":False},
+                                "CONTENT": {"default":{},"type":"dict","critical":False,"children":["FOOTER"],
+                                    "FOOTER": {"default":"Use this thread to talk about anything you want!","type":"str","critical":False}
+                                },
+                                "TWITTER": {"default":{},"type":"dict","critical":False,"children":["ENABLED","TEXT"],
+                                    "ENABLED": {"default":False,"type":"bool","critical":False},
+                                    "TEXT": {"default":"Keep the #{myTeam:name%stripspaces} discussion going in our weekly {sub} #offseason thread: {link}.","type":"str","critical":False}
+                                }
+                            },
                             "TWITTER": {"default":{},"type":"dict","critical":False,"children":["CONSUMER_KEY","CONSUMER_SECRET","ACCESS_TOKEN","ACCESS_SECRET"],
-                                "CONSUMER_KEY": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
-                                "CONSUMER_SECRET": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
-                                "ACCESS_TOKEN": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
-                                "ACCESS_SECRET": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
+                                "CONSUMER_KEY": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"WEEKLY_THREAD:TWITTER:ENABLED":False,"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
+                                "CONSUMER_SECRET": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"WEEKLY_THREAD:TWITTER:ENABLED":False,"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
+                                "ACCESS_TOKEN": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"WEEKLY_THREAD:TWITTER:ENABLED":False,"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
+                                "ACCESS_SECRET": {"default":"","type":"str","critical":False,"conditions":["BLANK,NONE,XXX"],"BLANK,NONE,XXX":{"WEEKLY_THREAD:TWITTER:ENABLED":False,"OFF_THREAD:TWITTER:ENABLED":False,"PRE_THREAD:TWITTER:ENABLED":False,"GAME_THREAD:TWITTER:ENABLED":False,"POST_THREAD:TWITTER:ENABLED":False}},
                             },
                             "STATSAPI_URL": {"default":"https://statsapi.mlb.com","type":"str","critical":False,"hidden":True}
                         }

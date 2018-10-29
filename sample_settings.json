@@ -25,6 +25,7 @@
                 "PRE_THREAD_SUBMITTED": true,
                 "GAME_THREAD_SUBMITTED": true,
                 "POST_THREAD_SUBMITTED": true,
+                "WEEKLY_THREAD_SUBMITTED": true,
                 "END_OF_DAY_EDIT_STATS": true
             }
         }
@@ -76,6 +77,7 @@
         "TITLE": "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}",
         "ASG_TITLE": "GAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}",
         "HOURS_BEFORE": 3,
+        "POST_BY": "10PM",
         "SUGGESTED_SORT": "new",
         "INBOX_REPLIES": false,
         "FLAIR": "",
@@ -95,6 +97,7 @@
             "THEATER_LINK": false,
             "PREVIEW_BLURB": true,
             "PREVIEW_PROBABLES": true,
+            "PREVIEW_STANDINGS": true,
             "NEXT_GAME": true
         },
         "NOTABLE_PLAY_COMMENTS": {
@@ -204,6 +207,22 @@
             "LOSS_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }The {myTeam:name} fell to the {oppTeam:name} {oppTeam:runs}-{myTeam:runs}. Join the discussion in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}",
             "OTHER_TEXT": "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}",
             "ASG_TEXT": "{series:%D - }The discussion continues in our postgame thread: {link} #MLBAllStarGame #ASG{date:%Y}"
+        }
+    },
+    "WEEKLY_THREAD": {
+        "ENABLED": true,
+        "OFFSEASON_ONLY": true,
+        "WEEK_START": "Monday",
+        "TITLE": "Weekly {sub} Offseason Discussion Thread - {date:%B %d, %Y}",
+        "INBOX_REPLIES": false,
+        "SUGGESTED_SORT": "new",
+        "FLAIR": "Offseason Thread",
+        "CONTENT": {
+            "FOOTER": "Use this thread to talk about anything you want!"
+        },
+        "TWITTER": {
+            "ENABLED": false,
+            "TEXT": "Keep the #{myTeam:name%stripspaces} discussion going in our weekly {sub} #offseason thread: {link}."
         }
     },
     "TWITTER": {

@@ -6,7 +6,7 @@ https://github.com/toddrob99/Baseball-GDT-Bot
 Forked from Baseball GDT Bot by Matt Bullock
 https://github.com/mattabullock/Baseball-GDT-Bot
 
-### Current Version: 5.1.7
+### Current Version: 5.1.8
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
@@ -60,6 +60,7 @@ The following settings can be configured in `/src/settings.json`:
 			* `PRE_THREAD_SUBMITTED` - send a notification when pregame thread is posted (true/false)
 			* `GAME_THREAD_SUBMITTED` - send a notification when game thread is posted (true/false)
 			* `POST_THREAD_SUBMITTED` - send a notification when postgame thread is posted (true/false)
+			* `WEEKLY_THREAD_SUBMITTED` - send a notification when weekly thread is posted (true/false)
 			* `END_OF_DAY_EDIT_STATS` - send notifications at the end of each day with stats about edit rate for each game, and averages across all games since last bot restart (true/false)
 
 * `TWITTER` - holds OAuth fields for Twitter API connection
@@ -124,6 +125,7 @@ The following settings can be configured in `/src/settings.json`:
 	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D Game %N -} {awayTeam:name} ({awayTeam:wins}-{awayTeam:losses}) @ {homeTeam:name} ({homeTeam:wins}-{homeTeam:losses}) - {date:%a %b %d @ %I:%M%p %Z}{dh: - DH Game %N}")
 	* `ASG_TITLE` - thread title for All-Star Game. see `PRE_THREAD` : `TITLE` for info about available parameters. (Default: "GAME THREAD:{series: %D -} {awayTeam:name} @ {homeTeam:name} - {date:%a %b %d @ %I:%M%p %Z}")
 	* `HOURS_BEFORE` - number of hours prior to game time that the bot posts the game thread (1, 2, 3, etc.)
+	* `POST_BY` - latest hour you want the game thread to be posted (within 10 minutes past the hour). game thread will be posted at the earlier of `POST_BY` of game start minus `HOURS_BEFORE` hours (except doubleheader game 2 with `HOLD_DH_GAME2_THREAD` enabled. use this to post game thread at the same time every day, for example when pregame threads are disabled. (default: "10PM" -- effectively disabled except for games that start at 10pm with `HOURS_BEFORE` set to 0)
 	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
 	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
 	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Game Thread")
@@ -136,6 +138,7 @@ The following settings can be configured in `/src/settings.json`:
 		* `THEATER_LINK` - include link to the game's highlights on baseball.theater in the Highlights section (true/false)
 		* `PREVIEW_BLURB` - include game headline and blurb in the thread header until the game starts (true/false)
 		* `PREVIEW_PROBABLES` - include probable pitchers in game thread until the game starts (true/false)
+		* `PREVIEW_STANDINGS` - include division standings in game thread until the game starts (true/false)
 		* `NEXT_GAME` - include next game date/time/opponent in the game thread after the game is final (true/false)
 	* `NOTABLE_PLAY_COMMENTS` - settings that control whether the bot comments on the game thread when specific game events occur
 		* `ENABLED` - do you want the bot to comment on game threads when configured game events occur? (true/false)
@@ -188,6 +191,20 @@ The following settings can be configured in `/src/settings.json`:
 		* `OTHER_TEXT` - what do you want your tweet to say when the game results in a tie, or is postponed/cancelled/suspended? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D Game %N - }{dh:DH Game %N - }The discussion continues in our postgame thread: {link} #{myTeam:name%stripspaces}{dh: #doubleheader}")
 		* `ASG_TEXT` - what do you want your tweet to say for All-Star Games? Same parameters as `*_TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "{series:%D - }The discussion continues in our postgame thread: {link} #MLBAllStarGame #ASG{date:%Y}")
 
+* `WEEKLY_THREAD` - weekly thread settings (intended for off season but can be used all year)
+	* `ENABLED` - do you want a weekly discussion thread? (true/false)
+	* `OFFSEASON_ONLY` - do you want to post weekly threads only during the off season? (true/false)
+	* `WEEK_START` - what day of the week do you want the weekly threads to post (around Midnight bot local time)? ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", default is "Monday")
+	* `TITLE` - thread title. see `PRE_THREAD` : `TITLE` for info about available parameters. Note: `{oppTeam}`, `{awayTeam}`, and `{homeTeam}` parameters are not supported for weekly threads. (Default: "Weekly {sub} Offseason Discussion Thread - {date:%B %d, %Y}")
+	* `SUGGESTED_SORT` - what do you want the suggested sort to be? set to "" if your bot user does not have mod rights ("confidence", "top", "new", "controversial", "old", "random", "qa", "")
+	* `INBOX_REPLIES` - do you want to receive thread replies in the bot's inbox? (true/false)
+	* `FLAIR` - flair to set on the thread, if `FLAIR_MODE` is not "none" ("Offseason Thread")
+	* `CONTENT`
+		* `FOOTER` - text to include in the body of the post ("Use this thread to talk about anything you want!")
+	* `TWITTER` - settings for tweeting off day thread link
+		* `ENABLED` - do you want to tweet a link to your off day thread? (true/false)
+		* `TEXT` - what do you want your tweet to say? Same parameters as `TITLE` are available, plus `{link}` which will be the thread shortlink. Twitter currently limits tweets to 280 characters, so be brief. (suggested: "The {myTeam:name} are off today. Pass the time in our off day thread: {link} #{myTeam:name%stripspaces}")
+
 ---
 
 If you have any issues or questions, feel free to message me on reddit (/u/toddrob) or post it as a bug on github.
@@ -209,6 +226,17 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.1.8
+* Added support for weekly threads, which can be enabled all year or only for offseason, and which will be posted around Midnight (bot local time) on the configured day. Configure with the new `WEEKLY_THREADS` section. See `README.md` for descriptions of the settings and `sample_settings.json` for examples.
+* Added `WEEKLY_THREAD_SUBMITTED` Prowl notification trigger for when weekly threads are submitted
+* Updated probable pitcher reports to use Stats API - this was the last piece of data coming from legacy data files
+* Added `GAME_THREAD`:`PREVIEW_STANDINGS` setting to include division standings in game threads while in preview status
+* Division standings will now be included in pre and game threads only for regular season games
+* Deprecated `download_files()` function
+* Added `GAME_THREAD`:`POST_BY` setting, which allows you to set the latest hour you want the game thread to be posted (within 10 minutes after the hour). the game thread will be posted at the earlier of `POST_BY` and game start minus `HOURS_BEFORE`. This is useful for subs that do not want to use pregame threads, and want the game thread posted at a specific time each day instead
+* Added check for game status of Live or Final when determining if it is time to post the game thread
+* Updated stale thread detection/handling
 
 #### v5.1.7
 * Fixed bug when next game is a Wild Card game

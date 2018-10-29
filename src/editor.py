@@ -75,9 +75,11 @@ class Editor:
                         break
         return self.gamesLive.get(link)
 
-    def get_schedule(self,day,team_id=None):
+    def get_schedule(self,day,team_id=None,gamePk=None,hydrate=None):
         todayurl = "/api/v1/schedule?language=en&sportId=1&date=" + day.strftime("%m/%d/%Y")
         if team_id: todayurl += "&teamId=" + str(team_id)
+        if gamePk: todayurl += "&gamePk=" + str(gamePk)
+        if hydrate: todayurl += "&hydrate=" + str(hydrate)
 
         todaydata = self.api_download(todayurl,True,30)
         todaydates = todaydata['dates']
@@ -106,7 +108,7 @@ class Editor:
         if len(teamId)==1: return ret[teamId[0]]
         else: return ret
 
-    def replace_params(self,original,thread,type,k=None,timemachine=False,myteamwon=""):
+    def replace_params(self,original,thread,type,k=None,timemachine=False,myteamwon="",usedate=None):
         logging.debug("Replacing parameters in %s %s...",thread,type)
         replaced = original.replace('\{','PLACEHOLDEROPEN').replace('\}','PLACEHOLDERCLOSE').replace('\:','PLACEHOLDERCOLON').replace('\%','PLACEHOLDERMOD')
         while replaced.find('{') != -1:
@@ -141,13 +143,15 @@ class Editor:
                 paramParts.append(paramParts[2][paramParts[2].find(':')+1:])
                 logging.debug("Found param parts: %s",paramParts)
                 if paramParts[4] == 'date':
-                    if thread == 'off':
-                        replaceVal = datetime.now().strftime(paramParts[5])
-                    else:
-                        replaceVal = self.games[k].get('gameInfo').get('date_object').strftime(paramParts[5])
+                    if not usedate:
+                        if thread in ['off','weekly']:
+                            usedate = datetime.now()
+                        else:
+                            usedate = self.games[k].get('gameInfo').get('date_object')
+                    replaceVal = usedate.strftime(paramParts[5])
                 elif paramParts[4] == 'myTeam':
                     if paramParts[5] == 'wins':
-                        if thread == 'off':
+                        if thread in ['off','weekly']:
                             replaceVal = str(self.get_record(int(self.lookup_team_info('team_id','team_code',self.SETTINGS.get('TEAM_CODE')))).get('wins'))
                         else:
                             if timemachine and myteamwon=="1":
@@ -155,7 +159,7 @@ class Editor:
                             else:
                                 replaceVal = str(self.games[k].get('gameInfo').get(self.games[k].get('homeaway'),{}).get('win'))
                     elif paramParts[5] == 'losses':
-                        if thread == 'off':
+                        if thread in ['off','weekly']:
                             replaceVal = str(self.get_record(int(self.lookup_team_info('team_id','team_code',self.SETTINGS.get('TEAM_CODE')))).get('losses'))
                         else:
                             if timemachine and myteamwon=="0":
@@ -172,8 +176,8 @@ class Editor:
                     else:
                         replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
-                    if thread == 'off':
-                        logging.warn("{oppTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
+                    if thread in ['off','weekly']:
+                        logging.warn("{oppTeam} parameter is not supported for %s thread %s (only myTeam), removing...", thread, type)
                         replaceVal = ''
                     else:
                         if self.games[k].get('homeaway') == 'home': opp = 'away'
@@ -198,8 +202,8 @@ class Editor:
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
-                    if thread == 'off':
-                        logging.warn("{awayTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
+                    if thread in ['off','weekly']:
+                        logging.warn("{awayTeam} parameter is not supported for %s thread %s (only myTeam), removing...", thread, type)
                         replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
@@ -222,8 +226,8 @@ class Editor:
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
-                    if thread == 'off':
-                        logging.warn("{homeTeam} parameter is not supported for off day thread %s (only myTeam), removing...", type)
+                    if thread in ['off','weekly']:
+                        logging.warn("{homeTeam} parameter is not supported for %s thread %s (only myTeam), removing...", thread, type)
                         replaceVal =  ''
                     else:
                         if paramParts[5] == 'wins':
@@ -246,8 +250,8 @@ class Editor:
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
-                    if thread == 'off':
-                        logging.warn("{series} parameter is not supported for off day thread %s, removing...", type)
+                    if thread in ['off','weekly']:
+                        logging.warn("{series} parameter is not supported for %s thread %s, removing...", thread, type)
                         replaceVal =  ''
                     else:
                         if self.games[k].get('gameType') in ['I', 'E', 'S', 'R']:
@@ -257,8 +261,8 @@ class Editor:
                             series = paramParts[5].replace('%D',self.games[k].get('seriesDescription')).replace('%N',str(self.games[k].get('seriesGameNumber')))
                             replaceVal = series
                 elif paramParts[4] == 'dh':
-                    if thread == 'off':
-                        logging.warn("{dh} parameter is not supported for off day thread %s, removing...", type)
+                    if thread in ['off','weekly']:
+                        logging.warn("{dh} parameter is not supported for %s thread %s, removing...", thread, type)
                         replaceVal =  ''
                     else:
                         if self.games[k].get('doubleHeader') == 'N':
@@ -273,15 +277,20 @@ class Editor:
             else: #params that don't have multiple parts
                 logging.debug("Found title param parts: %s",paramParts)
                 if paramParts[2] == 'vsat': 
-                    if thread == "off": 
+                    if thread in ['off','weekly']: 
                         replaceVal =  ''
-                        logging.warn("{vsat} parameter is not supported for off day thread %s, removing...", type)
+                        logging.warn("{vsat} parameter is not supported for %s thread %s, removing...", thread, type)
                     else:
                         if self.games[k].get('homeaway') == 'home': vsat = "vs"
                         else: vsat = '@'
                         replaceVal =  vsat
                 elif paramParts[2] == 'date': #use default date format
-                    replaceVal = self.games[k].get('gameInfo').get('date_object').strftime("%B %d, %Y")
+                    if not usedate:
+                        if thread in ['off','weekly']:
+                            usedate = datetime.now()
+                        else:
+                            usedate = self.games[k].get('gameInfo').get('date_object')
+                    replaceVal = usedate.strftime("%B %d, %Y")
                 elif paramParts[2] == 'gameNum':
                     replaceVal = str(self.games[k].get('gameNumber'))
                 else: #there are no other supported parameters without multiple parts at this time
@@ -302,7 +311,7 @@ class Editor:
         replaced = replaced.replace('PLACEHOLDEROPEN','{').replace('PLACEHOLDERCLOSE','}').replace('PLACEHOLDERCOLON',':').replace('PLACEHOLDERMOD','%')
         return replaced
 
-    def generate_title(self,k,thread,timemachine=False,myteamwon=""):
+    def generate_title(self,k,thread,timemachine=False,myteamwon="",usedate=None):
         if thread=="post" or timemachine:
             if myteamwon == "":
                 myteamwon = self.didmyteamwin(k)
@@ -322,8 +331,9 @@ class Editor:
             elif myteamwon == "0": title = self.SETTINGS.get('POST_THREAD').get('LOSS_TITLE')
             elif myteamwon == "1": title = self.SETTINGS.get('POST_THREAD').get('WIN_TITLE')
             else: title = self.SETTINGS.get('POST_THREAD').get('OTHER_TITLE')
+        elif thread == "weekly": title = self.SETTINGS.get('WEEKLY_THREAD').get('TITLE')
 
-        title = self.replace_params(title,thread,'title',k,timemachine,myteamwon)
+        title = self.replace_params(title,thread,'title',k,timemachine,myteamwon,usedate)
 
         logging.info("Returning %s title: %s...", thread, title)
         return title
@@ -348,52 +358,34 @@ class Editor:
             if othergameid and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 code += "##Game " + str(self.games[gameid].get('gameNumber')) + "\n"
 
-            ## Temp support for legacy files - required for pitcher reports in generate_probables()
-            dir = self.games[gameid].get('url')
-            dirs = []
-            dirs.append(dir + "gamecenter.xml")
-            files = self.download_files(dirs)
-            ## Temp support for legacy files^
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(gameid,thread="pre")
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'): code += "\n\n" + self.generate_blurb(gameid,'preview')
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code += "\n\n" + self.generate_probables(files,gameid)
-            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('DIV_STANDINGS'): code += "\n\n" + self.generate_standings()
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code += "\n\n" + self.generate_probables(gameid)
+            if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('DIV_STANDINGS') and self.games[gameid].get('gameType') == 'R': code += "\n\n" + self.generate_standings()
             if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER') and (not othergameid or not self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH')): code += "\n\n" + self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER')
             code += "\n\n"
 
             if othergameid and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 code += "---\n##Game " + str(self.games[othergameid].get('gameNumber')) + "\n"
-                ## Temp support for legacy files - required for pitcher reports in generate_probables()
-                odir = self.games[othergameid].get('url')
-                odirs = []
-                odirs.append(odir + "gamecenter.xml")
-                ofiles = self.download_files(odirs)
-                ## Temp support for legacy files^
                 if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(othergameid,thread="pre")
                 if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('BLURB'): code += "\n\n" + self.generate_blurb(othergameid,'preview')
-                if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code += "\n\n" + self.generate_probables(ofiles,othergameid)
+                if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('PROBABLES'): code += "\n\n" + self.generate_probables(othergameid)
                 if self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('PRE_THREAD').get('CONTENT').get('FOOTER')
                 code += "\n\n"
 
         elif thread=='game':
-            ## Temp support for legacy files
-            dir = self.games[gameid].get('url')
-            dirs = []
-            dirs.append(dir + "gamecenter.xml")
-            files = self.download_files(dirs)
-            ## Temp support for legacy files^
-            if thread == "game":
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(gameid,thread="game")
-                if self.games[gameid].get('status').get('abstractGameState') == 'Preview':
-                    if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): code += "\n\n" + self.generate_blurb(gameid,'preview')
-                    if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES'): code += "\n\n" + self.generate_probables(files,gameid)
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('BOX_SCORE'): code += "\n\n" + self.generate_boxscore(gameid)
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('LINE_SCORE'): code += "\n\n" + self.generate_linescore(gameid)
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS'): code += "\n\n" + self.generate_scoring_plays(gameid)
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS'): code += "\n\n" + self.generate_highlights(gameid,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK'))
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE'): code += "\n\n" + self.generate_current_state(gameid)
-                code += "\n\n" + self.generate_status(gameid,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('NEXT_GAME'))
-                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER')
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(gameid,thread="game")
+            if self.games[gameid].get('status').get('abstractGameState') == 'Preview':
+                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_BLURB'): code += "\n\n" + self.generate_blurb(gameid,'preview')
+                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_PROBABLES'): code += "\n\n" + self.generate_probables(gameid)
+                if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('PREVIEW_STANDINGS') and self.games[gameid].get('gameType') == 'R': code += "\n\n" + self.generate_standings()
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('BOX_SCORE'): code += "\n\n" + self.generate_boxscore(gameid)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('LINE_SCORE'): code += "\n\n" + self.generate_linescore(gameid)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('SCORING_PLAYS'): code += "\n\n" + self.generate_scoring_plays(gameid)
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('HIGHLIGHTS'): code += "\n\n" + self.generate_highlights(gameid,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('THEATER_LINK'))
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('CURRENT_STATE'): code += "\n\n" + self.generate_current_state(gameid)
+            code += "\n\n" + self.generate_status(gameid,self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('NEXT_GAME'))
+            if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('FOOTER')
 
         elif thread=='post':
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('HEADER'): code += "\n\n" + self.generate_header(gameid,thread="post")
@@ -404,11 +396,15 @@ class Editor:
             code += "\n\n" + self.generate_status(gameid,self.SETTINGS.get('POST_THREAD').get('CONTENT').get('NEXT_GAME'))
             if self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER'): code += "\n\n" + self.SETTINGS.get('POST_THREAD').get('CONTENT').get('FOOTER')
 
+        elif thread=='weekly':
+            if self.SETTINGS.get('WEEKLY_THREAD').get('CONTENT').get('FOOTER'): code += self.SETTINGS.get('WEEKLY_THREAD').get('CONTENT').get('FOOTER')
+            if code in ["","\n\n","\n\n\n\n"]: code = "Use this thread to talk about anything you want, even if it isn't directly related to baseball!" #don't want the post to be empty
+
         code += "\n\n"
         logging.debug("Returning all %s thread code...", thread)
         return code
 
-    def generate_probables(self,files,gameid):
+    def generate_probables(self,gameid):
         probables = ""
         gameLive = self.api_download(self.games[gameid].get('link'),True,10,apiVer='v1.1')
         awayPitcherData = gameLive.get('liveData').get('boxscore').get('teams').get('away').get('players').get('ID'+str(gameLive.get('gameData').get('probablePitchers').get('away',{}).get('id',0)),{})
@@ -420,16 +416,10 @@ class Editor:
         else: homeSubLink = "[" + self.games[gameid].get('gameInfo').get('home').get('team_name') + "](" + homesub + ")"
         if awaysub.find('/') == -1: awaySubLink = self.games[gameid].get('gameInfo').get('away').get('team_name')
         else: awaySubLink = "[" + self.games[gameid].get('gameInfo').get('away').get('team_name') + "](" + awaysub + ")"
-        ## Can't find pitcher reports in Stats API, so continuing to use legacy gamecenter.xml for now...
-        root = files["gamecenter"].getroot()
-        probables_xml = root.find('probables')
-        if probables_xml == -1:
-            logging.debug("Returning probables (none)...")
-            return ""
-        awayReport = probables_xml.find("away/report").text
-        if awayReport == None: awayReport = "No report posted."
-        homeReport = probables_xml.find("home/report").text
-        if homeReport == None: homeReport = "No report posted."
+
+        scheduleData = self.get_schedule(self.games[gameid].get('gameInfo').get('date_object').date(),gamePk=self.games[gameid].get('gamePk'),hydrate='probablePitcher(note)')
+        awayReport = scheduleData[0].get('teams',{}).get('away',{}).get('probablePitcher',{}).get('note','No report posted.')
+        homeReport = scheduleData[0].get('teams',{}).get('home',{}).get('probablePitcher',{}).get('note','No report posted.')
 
         away_pitcher = awayPitcherData.get('person',{}).get('fullName',"")
         if away_pitcher == "": away_pitcher = "TBA"
@@ -466,7 +456,7 @@ class Editor:
 
         blurbtext = gameContent.get('editorial',{}).get(type,{}).get(homeaway,{}).get('blurb')
         if not blurbtext and homeaway != 'mlb':
-            logging.debug("No %s blurb available, using mlb headline...", homeaway)
+            logging.debug("No %s blurb available, using mlb blurb...", homeaway)
             blurbtext = gameContent.get('editorial',{}).get(type,{}).get('mlb',{}).get('headline')
 
         if headline: blurb += "**" + headline + "**"
@@ -476,21 +466,6 @@ class Editor:
         else:
             logging.debug("Returning %s blurb...",type)
         return blurb
-
-    def download_files(self,dirs): #TODO: Deprecate once Stats API source is found for pitcher reports in `generate_probables()`
-        files = dict()
-
-        for dir in dirs:
-            try:
-                response = urllib2.urlopen(dir)
-                if dir[dir.rfind('.'):] == '.json': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = json.load(response)
-                elif dir[dir.rfind('.'):] == '.xml': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = ET.parse(response)
-            except Exception,e:
-                logging.error("Error downloading %s: %s", dir[dir.rfind('.'):], str(e))
-                if dir[dir.rfind('.'):] == '.json': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = {}
-                elif dir[dir.rfind('.'):] == '.xml': files[dir[dir.rfind('/')+1:dir.rfind('.')]] = ET.ElementTree("<root>")
-
-        return files
 
     def generate_header(self,gameid,thread="game"):
         header = ""
@@ -1227,7 +1202,7 @@ class Editor:
                 next += " vs " + next_game.get('away_team_name')
             if next_game.get('series') and next_game.get('series_num') and next_game.get('gameType') != 'R':
                 next += " (" + next_game.get('series') 
-                if str(next_game.get('series_num')) != '0' and next_game.get('gameType') not in ['I', 'E', 'S','R', 'F']:
+                if str(next_game.get('series_num')) != '0' and next_game.get('gameType') not in ['I', 'E', 'S', 'R', 'F']:
                     next += " Game " + str(next_game.get('series_num'))
                 next += ")"
             logging.debug("Returning next game...")

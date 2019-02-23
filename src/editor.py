@@ -172,7 +172,7 @@ class Editor:
                             replaceVal =  "0"
                         else:
                             gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
-                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get(self.games[k].get('homeaway'),{}).get('runs',0))
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get(self.games[k].get('homeaway'),{}).get('runs',0))
                     else:
                         replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
@@ -198,7 +198,7 @@ class Editor:
                                 replaceVal =  "0"
                             else:
                                 gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
-                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get(opp,{}).get('runs',0))
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get(opp,{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
@@ -222,7 +222,7 @@ class Editor:
                                 replaceVal =  "0"
                             else:
                                 gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
-                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get('away',{}).get('runs',0))
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get('away',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
@@ -246,7 +246,7 @@ class Editor:
                                 replaceVal =  "0"
                             else:
                                 gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
-                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get('home',{}).get('runs',0))
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get('home',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
@@ -1164,8 +1164,8 @@ class Editor:
         abstractGameState = self.games[k].get('status').get('abstractGameState')
         reason = self.games[k].get('status').get('reason')
         logging.debug("Status: %s/%s", abstractGameState, detailedState)
-        homeRuns = gamelive.get('liveData').get('linescore').get('teams').get('home',{}).get('runs',0)
-        awayRuns = gamelive.get('liveData').get('linescore').get('teams').get('away',{}).get('runs',0)
+        homeRuns = gamelive.get('liveData').get('linescore').get('teams',{}).get('home',{}).get('runs',0)
+        awayRuns = gamelive.get('liveData').get('linescore').get('teams',{}).get('away',{}).get('runs',0)
         homeName = self.games[k].get('gameInfo').get('home').get('team_name')
         awayName = self.games[k].get('gameInfo').get('away').get('team_name')
         if abstractGameState == "Final" and not detailedState.startswith('Cancelled') and not detailedState.startswith('Postponed'):
@@ -1290,8 +1290,8 @@ class Editor:
             return myteamwon
         if self.games[k].get('status').get('abstractGameState') == "Final" and not self.games[k].get('status').get('detailedState').startswith("Postponed") and not self.games[k].get('status').get('detailedState').startswith("Cancelled"):
             gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
-            hometeamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams').get('home',{}).get('runs',0))
-            awayteamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams').get('away',{}).get('runs',0))
+            hometeamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get('home',{}).get('runs',0))
+            awayteamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams',{}).get('away',{}).get('runs',0))
             if hometeamruns == awayteamruns:
                 myteamwon = "2"
                 logging.debug("Returning whether my team won (2-TIE)...")
@@ -1520,7 +1520,7 @@ class Editor:
                 homeSportCode = homeSport.get('sports')[0].get('code')
             else: homeSportCode = 'mlb'
         hometeam = self.lookup_team_info("all", "team_id", str(homeid),homeSportCode)
-        home.update({'name_abbrev' : hometeam.get('name_abbrev'), 'team_code' : hometeam.get('team_code'), 'team_name' : hometeam.get('name'), 'win' : game.get('teams').get('home').get('record').get('wins'), 'loss' : game.get('teams').get('home').get('record').get('losses'), 'runs' : gamelive.get('liveData').get('linescore',{}).get('home',{}).get('runs',0), 'sport_code' : homeSportCode, 'team_id' : homeid, 'file_code' : hometeam.get('file_code')})
+        home.update({'name_abbrev' : hometeam.get('name_abbrev'), 'team_code' : hometeam.get('team_code'), 'team_name' : hometeam.get('name'), 'win' : game.get('teams').get('home').get('record').get('wins'), 'loss' : game.get('teams').get('home').get('record').get('losses'), 'runs' : gamelive.get('liveData').get('linescore',{}).get('teams',{}).get('home',{}).get('runs',0), 'sport_code' : homeSportCode, 'team_id' : homeid, 'file_code' : hometeam.get('file_code')})
 
         awayid = game.get('teams').get('away').get('id')
         if awayid == None: awayid = game.get('teams').get('away').get('teamID')
@@ -1531,7 +1531,7 @@ class Editor:
                 awaySportCode = homeSport.get('sports')[0].get('code')
             else: awaySportCode = 'mlb'
         awayteam = self.lookup_team_info("all", "team_id", str(awayid),awaySportCode)
-        away.update({'name_abbrev' : awayteam.get('name_abbrev'), 'team_code' : awayteam.get('team_code'), 'team_name' : awayteam.get('name'), 'win' : game.get('teams').get('away').get('record').get('wins'), 'loss' : game.get('teams').get('away').get('record').get('losses'), 'runs' : gamelive.get('liveData').get('linescore',{}).get('away',{}).get('runs',0), 'sport_code' : awaySportCode, 'team_id' : awayid, 'file_code' : awayteam.get('file_code')})
+        away.update({'name_abbrev' : awayteam.get('name_abbrev'), 'team_code' : awayteam.get('team_code'), 'team_name' : awayteam.get('name'), 'win' : game.get('teams').get('away').get('record').get('wins'), 'loss' : game.get('teams').get('away').get('record').get('losses'), 'runs' : gamelive.get('liveData').get('linescore',{}).get('teams',{}).get('away',{}).get('runs',0), 'sport_code' : awaySportCode, 'team_id' : awayid, 'file_code' : awayteam.get('file_code')})
 
         teams.update({'home' : home, 'away' : away, 'time' : first_pitch, 'status': game.get('status'), 'date_object' : date_object, 'date_object_utc' : gameDate_object})
 

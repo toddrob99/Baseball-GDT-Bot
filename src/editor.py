@@ -650,6 +650,7 @@ class Editor:
         awayPitchers = []
         awayPitcherIds = gameBoxscore.get('teams').get('away').get('pitchers')
         for i in awayPitcherIds:
+            if i==0: continue
             v = gameBoxscore.get('teams').get('away').get('players').get('ID'+str(i))
             id = str(i)
             name = gameData.get('players').get('ID'+id).get('boxscoreName')
@@ -667,6 +668,7 @@ class Editor:
         homePitchers = []
         homePitcherIds = gameBoxscore.get('teams').get('home').get('pitchers')
         for i in homePitcherIds:
+            if i==0: continue
             v = gameBoxscore.get('teams').get('home').get('players').get('ID'+str(i))
             id = str(i)
             name = gameData.get('players').get('ID'+id).get('boxscoreName')

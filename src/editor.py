@@ -751,6 +751,7 @@ class Editor:
         if gameLinescore.get('teams',{}).get('away',{}).get('runs'):
             linescore += "|" + str(gameLinescore.get('teams').get('away').get('runs',0)) + "|" + str(gameLinescore.get('teams').get('away').get('hits',0)) + "|" + str(gameLinescore.get('teams').get('away').get('errors',0)) + "|" + awayLob
         else:
+            logging.debug('Falling back to linescore.away.runs because linescore.teams.away.runs does not exist...')
             linescore += "|" + str(gameLinescore.get('away',{}).get('runs',0)) + "|" + str(gameLinescore.get('away',{}).get('hits',0)) + "|" + str(gameLinescore.get('away',{}).get('errors',0)) + "|" + awayLob
         linescore += "\n" + homeSubLink + "|"
         x=1
@@ -779,6 +780,7 @@ class Editor:
         if gameLinescore.get('teams',{}).get('home',{}).get('runs'):
             linescore += "|" + str(gameLinescore.get('teams').get('home').get('runs',0)) + "|" + str(gameLinescore.get('teams').get('home').get('hits',0)) + "|" + str(gameLinescore.get('teams').get('home').get('errors',0)) + "|" + homeLob
         else:
+            logging.debug('Falling back to linescore.home.runs because linescore.teams.home.runs does not exist...')
             linescore += "|" + str(gameLinescore.get('home',{}).get('runs',0)) + "|" + str(gameLinescore.get('home',{}).get('hits',0)) + "|" + str(gameLinescore.get('home',{}).get('errors',0)) + "|" + homeLob
         logging.debug("Returning linescore...")
         return linescore + "\n"
@@ -817,6 +819,7 @@ class Editor:
         return scoringplays
 
     def get_latest_atBatIndex(self,gameid):
+        #possibly switch to currentPlay, which is available with v1.1
         gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
         if len(gameAllPlays) == 0:

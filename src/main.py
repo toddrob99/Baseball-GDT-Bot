@@ -654,7 +654,7 @@ class Bot:
                     self.editStats[k]['checked'].append({'stamp':datetime.today().strftime('%Y-%m-%d %H:%M:%S'), 'abstractGameState':game.get('status').get('abstractGameState'), 'detailedState':game.get('status').get('detailedState')})
                     if timechecker.gamecheck(k,activegames+pendinggames) == True:
                         if not game.get('gamesub'):
-                            logger.info("Generating game thread title for Games %s...",k)
+                            logger.info("Generating game thread title for Game %s...",k)
                             game.update({'gametitle': edit.generate_title(k,'game')})
                         if not game.get('final'):
                             check = edit.convert_tz(datetime.utcnow(),'bot')

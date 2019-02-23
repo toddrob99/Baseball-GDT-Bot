@@ -572,7 +572,6 @@ class Editor:
         awayBatters = []
         for k,v in gameBoxscore.get('teams').get('away').get('players').iteritems():
             if v.get('battingOrder'):
-                #name = self.lookup_player_info(v.get('person',{}).get('id',0),'boxscoreName')
                 name = gameData.get('players').get('ID'+str(v.get('person',{}).get('id',''))).get('boxscoreName')
                 pos = v.get('position').get('abbreviation')
                 ab = str(v.get('stats').get('batting').get('atBats'))

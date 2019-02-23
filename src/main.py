@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.8'
+        self.VERSION = '5.1.9'
         self.games = games.Games().games
         self.editStats = {}
         self.editStatHistory = []

@@ -171,8 +171,8 @@ class Editor:
                             logging.warn("{myTeam:runs} parameter is only supported for postgame thread, using 0...")
                             replaceVal =  "0"
                         else:
-                            gameLive = self.api_download(self.games[k].get('link'))
-                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get(self.games[k].get('homeaway'),{}).get('runs',0))
+                            gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get(self.games[k].get('homeaway'),{}).get('runs',0))
                     else:
                         replaceVal =  self.lookup_team_info(paramParts[5],'team_code',self.SETTINGS.get('TEAM_CODE')) #don't need to pass sportCode in this call, since myTeam must be MLB
                 elif paramParts[4] == 'oppTeam':
@@ -197,8 +197,8 @@ class Editor:
                                 logging.warn("{oppTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                gameLive = self.api_download(self.games[k].get('link'))
-                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get(opp,{}).get('runs',0))
+                                gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
+                            replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get(opp,{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get(opp).get('team').get('id')),self.games[k].get('gameInfo').get(opp).get('sport_code'))
                 elif paramParts[4] == 'awayTeam':
@@ -221,8 +221,8 @@ class Editor:
                                 logging.warn("{awayTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                gameLive = self.api_download(self.games[k].get('link'))
-                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('away',{}).get('runs',0))
+                                gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get('away',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('away').get('team').get('id')),self.games[k].get('gameInfo').get('away').get('sport_code'))
                 elif paramParts[4] == 'homeTeam':
@@ -245,8 +245,8 @@ class Editor:
                                 logging.warn("{homeTeam:runs} parameter is only supported for postgame thread, using 0...")
                                 replaceVal =  "0"
                             else:
-                                gameLive = self.api_download(self.games[k].get('link'))
-                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('home',{}).get('runs',0))
+                                gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
+                                replaceVal = str(gameLive.get('liveData').get('linescore',{}).get('teams').get('home',{}).get('runs',0))
                         else:
                             replaceVal =  self.lookup_team_info(paramParts[5],'team_id',str(self.games[k].get('teams').get('home').get('team').get('id')),self.games[k].get('gameInfo').get('home').get('sport_code'))
                 elif paramParts[4] == 'series':
@@ -353,7 +353,7 @@ class Editor:
                 othergameid = gameid
                 gameid = tempgameid
 
-            gameLive = self.api_download(self.games[gameid].get('link'),True,30)
+            gameLive = self.api_download(self.games[gameid].get('link'),True,30,apiVer='v1.1')
 
             if othergameid and self.SETTINGS.get('PRE_THREAD').get('CONSOLIDATE_DH'):
                 code += "##Game " + str(self.games[gameid].get('gameNumber')) + "\n"
@@ -469,7 +469,7 @@ class Editor:
 
     def generate_header(self,gameid,thread="game"):
         header = ""
-        gameLive = self.api_download(self.games[gameid].get('link'),True,10)
+        gameLive = self.api_download(self.games[gameid].get('link'),True,10,apiVer='v1.1')
         gameContent = self.api_download(self.games[gameid].get('content').get('link'),False,10)
 
         matchup = "[" + self.games[gameid].get('gameInfo').get('away').get('team_name') + " @ " + self.games[gameid].get('gameInfo').get('home').get('team_name') + "](http://mlb.mlb.com/images/2017_ipad/684/" + self.games[gameid].get('gameInfo').get('away').get('file_code') + self.games[gameid].get('gameInfo').get('home').get('file_code') + "_684.jpg)"
@@ -564,46 +564,48 @@ class Editor:
 
     def generate_boxscore(self,gameid):
         boxscore = ""
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameBoxscore = gameLive.get('liveData').get('boxscore')
+        gameData = gameLive.get('gameData')
 
         awayBattersRand = {}
         awayBatters = []
         for k,v in gameBoxscore.get('teams').get('away').get('players').iteritems():
-            if v.get('gameStats',{}).get('batting',{}).get('battingOrder'):
-                name = v.get('name').get('boxname')
-                pos = v.get('position')
-                ab = str(v.get('gameStats').get('batting').get('atBats'))
-                r = str(v.get('gameStats').get('batting').get('runs'))
-                hits = str(v.get('gameStats').get('batting').get('hits'))
-                rbi = str(v.get('gameStats').get('batting').get('rbi'))
-                bb = str(v.get('gameStats').get('batting').get('baseOnBalls'))
-                so = str(v.get('gameStats').get('batting').get('strikeOuts'))
+            if v.get('battingOrder'):
+                #name = self.lookup_player_info(v.get('person',{}).get('id',0),'boxscoreName')
+                name = gameData.get('players').get('ID'+str(v.get('person',{}).get('id',''))).get('boxscoreName')
+                pos = v.get('position').get('abbreviation')
+                ab = str(v.get('stats').get('batting').get('atBats'))
+                r = str(v.get('stats').get('batting').get('runs'))
+                hits = str(v.get('stats').get('batting').get('hits'))
+                rbi = str(v.get('stats').get('batting').get('rbi'))
+                bb = str(v.get('stats').get('batting').get('baseOnBalls'))
+                so = str(v.get('stats').get('batting').get('strikeOuts'))
                 ba = str(v.get('seasonStats').get('batting').get('avg'))
                 obp = str(v.get('seasonStats').get('batting').get('obp'))
                 slg = str(v.get('seasonStats').get('batting').get('slg'))
                 id =  str(v.get('id'))
-                awayBattersRand.update({v.get('gameStats',{}).get('batting',{}).get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
+                awayBattersRand.update({v.get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
         for x in sorted(awayBattersRand):
             awayBatters.append(awayBattersRand[x])
 
         homeBattersRand = {}
         homeBatters = []
         for k,v in gameBoxscore.get('teams').get('home').get('players').iteritems():
-            if v.get('gameStats',{}).get('batting',{}).get('battingOrder'):
-                name = v.get('name').get('boxname')
-                pos = v.get('position')
-                ab = str(v.get('gameStats').get('batting').get('atBats'))
-                r = str(v.get('gameStats').get('batting').get('runs'))
-                hits = str(v.get('gameStats').get('batting').get('hits'))
-                rbi = str(v.get('gameStats').get('batting').get('rbi'))
-                bb = str(v.get('gameStats').get('batting').get('baseOnBalls'))
-                so = str(v.get('gameStats').get('batting').get('strikeOuts'))
+            if v.get('battingOrder'):
+                name = gameData.get('players').get('ID'+str(v.get('person',{}).get('id',''))).get('boxscoreName')
+                pos = v.get('position').get('abbreviation')
+                ab = str(v.get('stats').get('batting').get('atBats'))
+                r = str(v.get('stats').get('batting').get('runs'))
+                hits = str(v.get('stats').get('batting').get('hits'))
+                rbi = str(v.get('stats').get('batting').get('rbi'))
+                bb = str(v.get('stats').get('batting').get('baseOnBalls'))
+                so = str(v.get('stats').get('batting').get('strikeOuts'))
                 ba = str(v.get('seasonStats').get('batting').get('avg'))
                 obp = str(v.get('seasonStats').get('batting').get('obp'))
                 slg = str(v.get('seasonStats').get('batting').get('slg'))
                 id =  str(v.get('id'))
-                homeBattersRand.update({v.get('gameStats',{}).get('batting',{}).get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
+                homeBattersRand.update({v.get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
         for x in sorted(homeBattersRand):
             homeBatters.append(homeBattersRand[x])
 
@@ -621,23 +623,23 @@ class Editor:
 
         if self.SETTINGS.get('GAME_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') or (self.SETTINGS.get('POST_THREAD').get('CONTENT').get('EXTENDED_BOX_SCORE') and self.games[gameid].get('final')):
             awayBattingBox = ""
-            awayInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('away').get('infoParsed')
+            awayInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('away').get('info')
             if awayInfoParsed:
                 ind1 = next((i for i,x in enumerate(awayInfoParsed) if x.get('title').upper() == 'BATTING'), None)
                 if ind1 != None: awayBattingInfo = awayInfoParsed[ind1]
                 else: awayBattingInfo = None
                 if awayBattingInfo:
-                    awayBattingFields = awayBattingInfo.get('fields',[{}])
+                    awayBattingFields = awayBattingInfo.get('fieldList',[{}])
                     for x in awayBattingFields:
                         awayBattingBox += '**' + x.get('label') + '**: ' + x.get('value') + ' '
             homeBattingBox = ""
-            homeInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('home').get('infoParsed')
+            homeInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('home').get('info')
             if homeInfoParsed:
                 ind2 = next((i for i,x in enumerate(homeInfoParsed) if x.get('title').upper() == 'BATTING'), None)
                 if ind2 != None: homeBattingInfo = homeInfoParsed[ind2]
                 else: homeBattingInfo = None
                 if homeBattingInfo:
-                    homeBattingFields = homeBattingInfo.get('fields',[{}])
+                    homeBattingFields = homeBattingInfo.get('fieldList',[{}])
                     for x in homeBattingFields:
                         homeBattingBox += '**' + x.get('label') + '**: ' + x.get('value') + ' '
             if awayBattingBox != homeBattingBox:
@@ -649,34 +651,34 @@ class Editor:
         awayPitcherIds = gameBoxscore.get('teams').get('away').get('pitchers')
         for i in awayPitcherIds:
             v = gameBoxscore.get('teams').get('away').get('players').get('ID'+str(i))
-            name = v.get('name').get('boxname')
-            ip = str(v.get('gameStats').get('pitching').get('inningsPitched'))
-            h = str(v.get('gameStats').get('pitching').get('hits'))
-            r = str(v.get('gameStats').get('pitching').get('runs'))
-            er = str(v.get('gameStats').get('pitching').get('earnedRuns'))
-            bb = str(v.get('gameStats').get('pitching').get('baseOnBalls'))
-            so = str(v.get('gameStats').get('pitching').get('strikeOuts'))
-            p = str(v.get('gameStats').get('pitching').get('pitchesThrown'))
-            s = str(v.get('gameStats').get('pitching').get('strikes'))
-            era = str(v.get('seasonStats').get('pitching').get('era'))
             id = str(i)
+            name = gameData.get('players').get('ID'+id).get('boxscoreName')
+            ip = str(v.get('stats',{}).get('pitching',{}).get('inningsPitched',0))
+            h = str(v.get('stats',{}).get('pitching',{}).get('hits',0))
+            r = str(v.get('stats',{}).get('pitching',{}).get('runs',0))
+            er = str(v.get('stats',{}).get('pitching',{}).get('earnedRuns',0))
+            bb = str(v.get('stats',{}).get('pitching',{}).get('baseOnBalls',0))
+            so = str(v.get('stats',{}).get('pitching',{}).get('strikeOuts',0))
+            p = str(v.get('stats',{}).get('pitching',{}).get('pitchesThrown',0))
+            s = str(v.get('stats',{}).get('pitching',{}).get('strikes',0))
+            era = str(v.get('seasonStats',{}).get('pitching',{}).get('era',0))
             awayPitchers.append(player.pitcher(name,ip,h,r,er,bb,so,p,s,era,id))
 
         homePitchers = []
         homePitcherIds = gameBoxscore.get('teams').get('home').get('pitchers')
         for i in homePitcherIds:
             v = gameBoxscore.get('teams').get('home').get('players').get('ID'+str(i))
-            name = v.get('name').get('boxname')
-            ip = str(v.get('gameStats').get('pitching').get('inningsPitched'))
-            h = str(v.get('gameStats').get('pitching').get('hits'))
-            r = str(v.get('gameStats').get('pitching').get('runs'))
-            er = str(v.get('gameStats').get('pitching').get('earnedRuns'))
-            bb = str(v.get('gameStats').get('pitching').get('baseOnBalls'))
-            so = str(v.get('gameStats').get('pitching').get('strikeOuts'))
-            p = str(v.get('gameStats').get('pitching').get('pitchesThrown'))
-            s = str(v.get('gameStats').get('pitching').get('strikes'))
-            era = str(v.get('seasonStats').get('pitching').get('era'))
             id = str(i)
+            name = gameData.get('players').get('ID'+id).get('boxscoreName')
+            ip = str(v.get('stats',{}).get('pitching',{}).get('inningsPitched',0))
+            h = str(v.get('stats',{}).get('pitching',{}).get('hits',0))
+            r = str(v.get('stats',{}).get('pitching',{}).get('runs',0))
+            er = str(v.get('stats',{}).get('pitching',{}).get('earnedRuns',0))
+            bb = str(v.get('stats',{}).get('pitching',{}).get('baseOnBalls',0))
+            so = str(v.get('stats',{}).get('pitching',{}).get('strikeOuts',0))
+            p = str(v.get('stats',{}).get('pitching',{}).get('pitchesThrown',0))
+            s = str(v.get('stats',{}).get('pitching',{}).get('strikes',0))
+            era = str(v.get('seasonStats',{}).get('pitching',{}).get('era',0))
             homePitchers.append(player.pitcher(name,ip,h,r,er,bb,so,p,s,era,id))
 
         while len(homePitchers) < len(awayPitchers):
@@ -703,7 +705,7 @@ class Editor:
         if self.games[gameid].get('status').get('abstractGameState') == 'Preview':
             logging.debug("Returning linescore (none)...")
             return linescore
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameLinescore  = gameLive.get('liveData').get('linescore')
         innings = gameLinescore.get('innings')
         numInnings = len(innings) if len(innings) > 9 else 9
@@ -732,13 +734,13 @@ class Editor:
             for i in range(x, numInnings+1):
                 linescore += "|"
         awayLob = None
-        awayInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('away').get('infoParsed')
+        awayInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('away').get('info')
         if awayInfoParsed:
             ind1 = next((i for i,x in enumerate(awayInfoParsed) if x.get('title').upper() == 'BATTING'), None)
             if ind1 != None: awayBattingInfo = awayInfoParsed[ind1]
             else: awayBattingInfo = None
             if awayBattingInfo:
-                awayBattingFields = awayBattingInfo.get('fields',{})
+                awayBattingFields = awayBattingInfo.get('fieldList',{})
                 ind2 = next((i for i,x in enumerate(awayBattingFields) if x.get('label').lower() == 'team lob'), None)
                 if ind2 != None: awayLobDict = awayBattingFields[ind2]
                 else: awayLobDict = None
@@ -760,13 +762,13 @@ class Editor:
             for i in range(x, numInnings+1):
                 linescore += "|"
         homeLob = None
-        homeInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('home').get('infoParsed')
+        homeInfoParsed = gameLive.get('liveData').get('boxscore').get('teams').get('home').get('info')
         if homeInfoParsed:
             ind3 = next((i for i,x in enumerate(homeInfoParsed) if x.get('title').upper() == 'BATTING'), None)
             if ind3 != None: homeBattingInfo = homeInfoParsed[ind3]
             else: homeBattingInfo = None
             if homeBattingInfo:
-                homeBattingFields = homeBattingInfo.get('fields',{})
+                homeBattingFields = homeBattingInfo.get('fieldList',{})
                 ind4 = next((i for i,x in enumerate(homeBattingFields) if x.get('label').lower() == 'team lob'), None)
                 if ind4 != None: homeLobDict = homeBattingFields[ind4]
                 else: homeLobDict = None
@@ -781,7 +783,7 @@ class Editor:
 
     def generate_scoring_plays(self,gameid):
         scoringplays = ""
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameScoringPlays = gameLive.get('liveData').get('plays').get('scoringPlays')
         if len(gameScoringPlays) == 0:
             logging.debug("Returning scoringplays (none)...")
@@ -794,7 +796,7 @@ class Editor:
         scoringplays += ":--|:--|:--\n"
         prevInn = ""
         for play in plays:
-            thisInn = "Bottom " + play.get('about').get('inning') if play.get('about').get('halfInning')=='bottom' else "Top " + play.get('about').get('inning')
+            thisInn = "Bottom " + str(play.get('about').get('inning')) if play.get('about').get('halfInning')=='bottom' else "Top " + str(play.get('about').get('inning'))
             if thisInn != prevInn: scoringplays += thisInn + "|"
             else: scoringplays += "| |"
             prevInn = thisInn
@@ -813,7 +815,7 @@ class Editor:
         return scoringplays
 
     def get_latest_atBatIndex(self,gameid):
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
         if len(gameAllPlays) == 0:
             logging.debug("Returning latest atBatIndex (none)...")
@@ -826,7 +828,7 @@ class Editor:
     
     def get_notable_plays(self,gameid):
         notablePlays = []
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
         gameAllPlays = gameLive.get('liveData').get('plays').get('allPlays')
         if len(gameAllPlays) == 0:
             logging.debug("Returning notable plays (none)...")
@@ -859,7 +861,7 @@ class Editor:
                     self.gamesComments[play.get('about').get('atBatIndex')].append({play.get('result').get('event','') : play.get('result').get('description')})
                 else:
                     logging.debug("Result event %s for atBatIndex %s already commented.", play.get('result').get('event',''), play.get('about').get('atBatIndex'))
-            self.games[gameid]['atBatIndex'].update({'id':play.get('about').get('atBatIndex'), 'actions':play.get('actions'), 'pitches':play.get('pitches')})
+            self.games[gameid]['atBatIndex'].update({'id':play.get('about').get('atBatIndex'), 'actions':play.get('actions'), 'pitches':play.get('pitches',0)})
             #logging.debug("gamesComments for atBatIndex %s: %s.", play.get('about').get('atBatIndex'), self.gamesComments.get(play.get('about').get('atBatIndex')))
         logging.debug("atBatIndex for Game %s: %s", gameid, self.games[gameid]['atBatIndex'])
         return notablePlays
@@ -916,7 +918,7 @@ class Editor:
 
                 comment_text += play.get('play').get('result').get('description')
 
-                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('PITCH_STATS') and len(play.get('play').get('pitches')):
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('PITCH_STATS') and len(play.get('play').get('pitches',[])):
                     #get pitch stats
                     try:
                         pitchType = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('details',{}).get('displayName','unknown')
@@ -926,7 +928,7 @@ class Editor:
                         comment_text += "\n\nPitch Type: " + pitchType + "\n\nStart Speed: " + startSpeed + "\n\nEnd Speed: " + endSpeed + "\n\nNasty Factor: " + nastyFactor
                     except:
                         logging.error("Error adding pitch stats to notable play comment (ID: %s, Type: %s, Event: %s).", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'))
-                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('HIT_STATS') and len(play.get('play').get('pitches')):
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('HIT_STATS') and len(play.get('play').get('pitches',[])):
                     #get hit stats
                     try:
                         launchSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('launchSpeed','unknown')
@@ -959,7 +961,7 @@ class Editor:
     def generate_highlights(self,gameid,theater_link=False):
         highlights = ""
         gameContent = self.api_download(self.games[gameid].get('content').get('link'),False,5)
-        gameItems = (v for v in gameContent.get('highlights',{}).get('live',{}).get('items',{}) if v.get('type')=='video')
+        gameItems = (v for v in gameContent.get('highlights',{}).get('highlights',{}).get('items',{}) if v.get('type')=='video')
         highlights += "|Team|Highlight|Links|\n"
         highlights += "|:--|:--|:--|\n"
         unorderedHighlights = {}
@@ -993,7 +995,7 @@ class Editor:
     def generate_current_state(self,gameid):
         current_state = ""
 
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5)
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,apiVer='v1.1')
 
         detailedState = self.games[gameid].get('status').get('detailedState')
         abstractGameState = self.games[gameid].get('status').get('abstractGameState')
@@ -1001,24 +1003,24 @@ class Editor:
             current_state += gameLive.get('liveData').get('linescore').get('inningHalf') + " of the " + gameLive.get('liveData').get('linescore').get('currentInningOrdinal')
 
             currentPlay = gameLive.get('liveData').get('plays').get('currentPlay')
-            offense = gameLive.get('liveData').get('players').get('offense')
-            defense = gameLive.get('liveData').get('players').get('defense')
+            offense = gameLive.get('liveData').get('linescore').get('offense')
+            defense = gameLive.get('liveData').get('linescore').get('defense')
             outs = str(currentPlay.get('count').get('outs','0'))
             if outs == '3':
                 if gameLive.get('liveData').get('linescore').get('inningHalf') == 'Top': current_state = current_state.replace('Top','Middle')
                 elif gameLive.get('liveData').get('linescore').get('inningHalf') == 'Bottom': current_state = current_state.replace('Bottom','End')
                 if current_state == 'Middle of the 7th': current_state = "Seventh inning stretch"
 
-                dueup = self.lookup_player_info(offense.get('batter'),'fullName')
+                dueup = offense.get('batter').get('fullName')
                 comingup = " with " + dueup
 
-                ondeck = self.lookup_player_info(offense.get('onDeck'),'fullName')
+                ondeck = offense.get('onDeck').get('fullName')
                 comingup += ", " + ondeck
 
-                inhole = self.lookup_player_info(offense.get('inHole'),'fullName')
+                inhole = offense.get('inHole').get('fullName')
                 comingup += ", and " + inhole
 
-                teamcomingup = self.lookup_team_info('name','team_id',offense.get('teamID'))
+                teamcomingup = self.lookup_team_info('name','team_id',str(offense.get('team').get('id')))
                 comingup += " due up for the " + teamcomingup + "."
 
                 if comingup == " with , , and  due up for the " + teamcomingup + ".": comingup = "with the " + teamcomingup + " coming up to bat."
@@ -1041,16 +1043,16 @@ class Editor:
                 count = str(currentPlay.get('count').get('balls','0')) + "-" + str(currentPlay.get('count').get('strikes','0'))
                 current_state += ", and a count of " + count
 
-                atbat = self.lookup_player_info(currentPlay.get('matchup').get('batter'),'fullName')
+                atbat = currentPlay.get('matchup').get('batter').get('fullName')
                 if not atbat: atbat = "*Unknown*"
                 current_state += " with " + atbat + " batting"
 
-                onthemound = self.lookup_player_info(currentPlay.get('matchup').get('pitcher'),'fullName')
+                onthemound = currentPlay.get('matchup').get('pitcher').get('fullName')
                 if not onthemound: onthemound = "*Unknown*"
                 current_state += " and " + onthemound + " pitching."
 
-                ondeck = self.lookup_player_info(offense.get('onDeck'),'fullName')
-                inthehole = self.lookup_player_info(offense.get('inHole'),'fullName')
+                ondeck = offense.get('onDeck').get('fullName')
+                inthehole = offense.get('inHole').get('fullName')
                 if ondeck:
                     current_state += " " + ondeck + " is on deck"
                     if inthehole: current_state += ", and " + inthehole + " is in the hole."    
@@ -1079,11 +1081,11 @@ class Editor:
 
     def generate_decisions(self,gameid):
         decisions = ""
-        gameLive = self.api_download(self.games[gameid].get('link'),False,5,False)
-        homeRuns = gameLive.get('liveData').get('linescore').get('home').get('runs')
-        awayRuns = gameLive.get('liveData').get('linescore').get('away').get('runs')
-        homeName = gameLive.get('gameData').get('teams').get('home').get('name').get('brief')
-        awayName = gameLive.get('gameData').get('teams').get('away').get('name').get('brief')
+        gameLive = self.api_download(self.games[gameid].get('link'),False,5,False,apiVer='v1.1')
+        homeRuns = gameLive.get('liveData').get('linescore').get('teams').get('home').get('runs')
+        awayRuns = gameLive.get('liveData').get('linescore').get('teams').get('away').get('runs')
+        homeName = gameLive.get('gameData').get('teams').get('home').get('teamName')
+        awayName = gameLive.get('gameData').get('teams').get('away').get('teamName')
         homeSubLink = self.lookup_team_info('sublink','team_id',str(self.games[gameid].get('gameInfo').get('home').get('team_id')),self.games[gameid].get('gameInfo').get('home').get('sport_code'))
         awaySubLink = self.lookup_team_info('sublink','team_id',str(self.games[gameid].get('gameInfo').get('away').get('team_id')),self.games[gameid].get('gameInfo').get('away').get('sport_code'))
         winner = ""
@@ -1095,30 +1097,37 @@ class Editor:
             return decisions
 
         loser = "away" if winner=="home" else "home"
-        winningPitcher = gameLive.get('liveData').get('boxscore').get('teams').get(winner).get('players').get('ID'+str(gameLive.get('liveData').get('linescore').get('pitchers').get('win')))
-        losingPitcher = gameLive.get('liveData').get('boxscore').get('teams').get(loser).get('players').get('ID'+str(gameLive.get('liveData').get('linescore').get('pitchers').get('loss')))
+
+        winningPitcher = gameLive.get('liveData').get('boxscore').get('teams').get(winner).get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('winner',{}).get('id',0)))
+        winningPitcher.update({'boxscoreName' : gameLive.get('gameData').get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('winner',{}).get('id',0))).get('boxscoreName')})
+
+        losingPitcher = gameLive.get('liveData').get('boxscore').get('teams').get(loser).get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('loser',{}).get('id',0)))
+        losingPitcher.update({'boxscoreName' : gameLive.get('gameData').get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('loser',{}).get('id',0))).get('boxscoreName')})
+
         savePitcher = None
-        savePitcher = gameLive.get('liveData').get('boxscore').get('teams').get(winner).get('players').get('ID'+str(gameLive.get('liveData').get('linescore').get('pitchers').get('save')))
+        savePitcher = gameLive.get('liveData').get('boxscore').get('teams').get(winner).get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('save',{}).get('id',0)))
+        savePitcher.update({'boxscoreName' : gameLive.get('gameData').get('players').get('ID'+str(gameLive.get('liveData').get('decisions',{}).get('save',{}).get('id',0))).get('boxscoreName')})
+
         decisions += "|Decisions||" + "\n"
         decisions += "|:--|:--|" + "\n"
         decisions += "|" + awaySubLink + "|"
         if winner=='away':
-            if winningPitcher: decisions += "[" + winningPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('id')) + ") " + winningPitcher.get('gameStats').get('pitching').get('note')
+            if winningPitcher: decisions += "[" + winningPitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('person').get('id')) + ") " + winningPitcher.get('stats').get('pitching').get('note','')
             else: decisions += "Winning pitcher data not available"
-            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            if savePitcher: decisions += ", [" + savePitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('person').get('id')) + ") " + savePitcher.get('stats').get('pitching').get('note','') + "|\n"
             else: decisions += "|\n"
         else:
-            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            if losingPitcher: decisions += "[" + losingPitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('person').get('id')) + ") " + losingPitcher.get('stats').get('pitching').get('note','') + "|\n"
             else: decisions += "Losing pitcher data not available|\n"
 
         decisions += "|" + homeSubLink + "|"
         if winner=='home':
-            if winningPitcher: decisions += "[" + winningPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('id')) + ") " + winningPitcher.get('gameStats').get('pitching').get('note')
+            if winningPitcher: decisions += "[" + winningPitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(winningPitcher.get('person').get('id')) + ") " + winningPitcher.get('stats').get('pitching').get('note','')
             else: decisions += "Winning pitcher data not available"
-            if savePitcher: decisions += ", [" + savePitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('id')) + ") " + savePitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            if savePitcher: decisions += ", [" + savePitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(savePitcher.get('person').get('id')) + ") " + savePitcher.get('stats').get('pitching').get('note','') + "|\n"
             else: decisions += "|\n"
         else:
-            if losingPitcher: decisions += "[" + losingPitcher.get('name').get('boxname') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('id')) + ") " + losingPitcher.get('gameStats').get('pitching').get('note') + "|\n"
+            if losingPitcher: decisions += "[" + losingPitcher.get('boxscoreName') + "](http://mlb.mlb.com/team/player.jsp?player_id=" + str(losingPitcher.get('person').get('id')) + ") " + losingPitcher.get('stats').get('pitching').get('note') + "|\n"
             else: decisions += "Losing pitcher data not available|\n"
 
         logging.debug("Returning decisions...")
@@ -1148,25 +1157,25 @@ class Editor:
 
     def generate_status(self,k,include_next_game=False):
         status = ""
-        gamelive = self.api_download(self.games[k].get('link'))
+        gamelive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
         detailedState = self.games[k].get('status').get('detailedState')
         abstractGameState = self.games[k].get('status').get('abstractGameState')
         reason = self.games[k].get('status').get('reason')
         logging.debug("Status: %s/%s", abstractGameState, detailedState)
-        homeRuns = gamelive.get('liveData').get('linescore').get('home',{}).get('runs',0)
-        awayRuns = gamelive.get('liveData').get('linescore').get('away',{}).get('runs',0)
+        homeRuns = gamelive.get('liveData').get('linescore').get('teams').get('home',{}).get('runs',0)
+        awayRuns = gamelive.get('liveData').get('linescore').get('teams').get('away',{}).get('runs',0)
         homeName = self.games[k].get('gameInfo').get('home').get('team_name')
         awayName = self.games[k].get('gameInfo').get('away').get('team_name')
         if abstractGameState == "Final" and not detailedState.startswith('Cancelled') and not detailedState.startswith('Postponed'):
             status += "##" + detailedState.replace('Game Over','Final')
             if int(homeRuns) < int(awayRuns):
-                status += ": " + awayRuns + "-" + homeRuns + " " + awayName + "\n"
+                status += ": " + str(awayRuns) + "-" + str(homeRuns) + " " + awayName + "\n"
                 status += self.generate_decisions(k)
                 if include_next_game: status += "\n" + self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
                 logging.info("Returning status (Final/Away Win)...")
                 return status
             elif int(homeRuns) > int(awayRuns):
-                status += ": " + homeRuns + "-" + awayRuns + " " + homeName + "\n"
+                status += ": " + str(homeRuns) + "-" + str(awayRuns) + " " + homeName + "\n"
                 status += self.generate_decisions(k)
                 if include_next_game: status += "\n" + self.generate_next_game(thisPk=self.games[k].get('gamePk')) + "\n\n"
                 logging.info("Returning status (Final/Home Win)...")
@@ -1278,9 +1287,9 @@ class Editor:
             logging.error("Cannot determine if my team is home or away, returning empty string for whether my team won...")
             return myteamwon
         if self.games[k].get('status').get('abstractGameState') == "Final" and not self.games[k].get('status').get('detailedState').startswith("Postponed") and not self.games[k].get('status').get('detailedState').startswith("Cancelled"):
-            gameLive = self.api_download(self.games[k].get('link'))
-            hometeamruns = int(gameLive.get('liveData').get('linescore',{}).get('home',{}).get('runs',0))
-            awayteamruns = int(gameLive.get('liveData').get('linescore',{}).get('away',{}).get('runs',0))
+            gameLive = self.api_download(self.games[k].get('link'),apiVer='v1.1')
+            hometeamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams').get('home',{}).get('runs',0))
+            awayteamruns = int(gameLive.get('liveData').get('linescore',{}).get('teams').get('away',{}).get('runs',0))
             if hometeamruns == awayteamruns:
                 myteamwon = "2"
                 logging.debug("Returning whether my team won (2-TIE)...")

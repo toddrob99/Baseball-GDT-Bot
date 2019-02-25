@@ -1070,6 +1070,7 @@ class Bot:
                         else: sumPreviewRate = '-'
                         if sumCommentCount != 0:
                             sumCommentRate = sumCommentCount/(numDays)
+                        else: sumCommentRate = '-'
 
                         logger.info("Average game thread edit stats over last %s games (all statuses): %s checks, %s edits, %s%% edit rate.", numDays, sumChecks, sumEdits, sumOverallRate)
                         logger.info("Average game thread edit stats over last %s games (Preview status): %s checks, %s edits, %s%% edit rate.", numDays, sumPreviewChecks, sumPreviewEdits, sumPreviewRate)

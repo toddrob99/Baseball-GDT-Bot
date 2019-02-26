@@ -583,7 +583,7 @@ class Editor:
                 ba = str(v.get('seasonStats').get('batting').get('avg'))
                 obp = str(v.get('seasonStats').get('batting').get('obp'))
                 slg = str(v.get('seasonStats').get('batting').get('slg'))
-                id =  str(v.get('id'))
+                id =  v.get('person',{}).get('id','')
                 awayBattersRand.update({v.get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
         for x in sorted(awayBattersRand):
             awayBatters.append(awayBattersRand[x])
@@ -603,7 +603,7 @@ class Editor:
                 ba = str(v.get('seasonStats').get('batting').get('avg'))
                 obp = str(v.get('seasonStats').get('batting').get('obp'))
                 slg = str(v.get('seasonStats').get('batting').get('slg'))
-                id =  str(v.get('id'))
+                id =  str(v.get('person',{}).get('id',''))
                 homeBattersRand.update({v.get('battingOrder') : player.batter(name,pos,ab,r,hits,rbi,bb,so,ba,obp,slg,id)})
         for x in sorted(homeBattersRand):
             homeBatters.append(homeBattersRand[x])

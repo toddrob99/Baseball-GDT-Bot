@@ -941,6 +941,9 @@ class Editor:
     def generate_highlights(self,gameid,theater_link=False):
         highlights = ""
         gameContent = self.api_download(self.games[gameid].get('content').get('link'),False,5)
+        if not gameContent:
+            logging.debug("Returning highlights (none)...")
+            return ""
         gameItems = (v for v in gameContent.get('highlights',{}).get('highlights',{}).get('items',{}) if v.get('type')=='video')
         highlights += "|Team|Highlight|Links|\n"
         highlights += "|:--|:--|:--|\n"

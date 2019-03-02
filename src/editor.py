@@ -779,7 +779,7 @@ class Editor:
             if thisInn != prevInn: scoringplays += thisInn + "|"
             else: scoringplays += "| |"
             prevInn = thisInn
-            scoringplays += play.get('result').get('description') + "|"
+            scoringplays += play.get('result').get('description','') + "|"
             homeScore = play.get('result').get('homeScore',0)
             awayScore = play.get('result').get('awayScore',0)
             if int(homeScore) > int(awayScore): leader = 'home'

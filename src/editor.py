@@ -949,7 +949,7 @@ class Editor:
         highlights += "|:--|:--|:--|\n"
         unorderedHighlights = {}
         for x in gameItems:
-            unorderedHighlights.update({x.get('id') : x})
+            if x.get('id'): unorderedHighlights.update({x.get('id') : x})
         if len(unorderedHighlights) == 0:
             logging.debug("Returning highlights (none)...")
             return ""

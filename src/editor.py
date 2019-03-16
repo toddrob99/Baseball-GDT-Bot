@@ -1508,7 +1508,7 @@ class Editor:
         if awaySportCode == None:
             awaySport = self.api_download(game.get('teams').get('away').get('sport',{}).get('link'))
             if awaySport:
-                awaySportCode = homeSport.get('sports')[0].get('code')
+                awaySportCode = awaySport.get('sports')[0].get('code')
             else: awaySportCode = 'mlb'
         awayteam = self.lookup_team_info("all", "team_id", str(awayid),awaySportCode)
         away.update({'name_abbrev' : awayteam.get('name_abbrev'), 'team_code' : awayteam.get('team_code'), 'team_name' : awayteam.get('name'), 'win' : game.get('teams').get('away').get('record').get('wins'), 'loss' : game.get('teams').get('away').get('record').get('losses'), 'runs' : gamelive.get('liveData').get('linescore',{}).get('teams',{}).get('away',{}).get('runs',0), 'sport_code' : awaySportCode, 'team_id' : awayid, 'file_code' : awayteam.get('file_code')})

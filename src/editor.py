@@ -944,7 +944,7 @@ class Editor:
         if not gameContent:
             logging.debug("Returning highlights (none)...")
             return ""
-        gameItems = (v for v in gameContent.get('highlights',{}).get('highlights',{}).get('items',{}) if v.get('type')=='video')
+        gameItems = (v for v in gameContent.get('highlights',{}).get('highlights',{}).get('items',{}) if isinstance(v, dict) and v.get('type')=='video')
         highlights += "|Team|Highlight|Links|\n"
         highlights += "|:--|:--|:--|\n"
         unorderedHighlights = {}

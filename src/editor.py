@@ -949,7 +949,7 @@ class Editor:
         highlights += "|:--|:--|:--|\n"
         unorderedHighlights = {}
         for x in gameItems:
-            if isinstance(x,dict): unorderedHighlights.update({x.get('id') : x})
+            if isinstance(x,dict): unorderedHighlights.update({x.get('date') : x})
         if len(unorderedHighlights) == 0:
             logging.debug("Returning highlights (none)...")
             return ""
@@ -965,6 +965,7 @@ class Editor:
             if not sdLink: sdLink = ""
             else: sdLink = "[SD]("+sdLink+")"
             hdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='FLASH_2500K_1280X720'),None)
+            if not hdLink: hdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='mp4Avc'),None)
             if not hdLink: hdLink = ""
             else: hdLink = "[HD]("+hdLink+")"
             highlights += "|" + subLink + "|" + x.get('headline') + " (" + x.get('duration') + ")|" + sdLink + " " + hdLink + "|\n"

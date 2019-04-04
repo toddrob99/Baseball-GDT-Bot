@@ -957,15 +957,15 @@ class Editor:
         for x in sorted(unorderedHighlights):
             sortedHighlights.append(unorderedHighlights[x])
         for x in sortedHighlights:
-            team = next((v.get('value') for v in x.get('keywordsDisplay') if v.get('type')=='team_id'),None)
+            team = next((v.get('value') for v in x.get('keywordsDisplay',{}) if v.get('type')=='team_id'),None)
             if not team: subLink='[](/MLB)'
             else: subLink = self.lookup_team_info('sublink','team_id',team)
             if subLink == "": subLink='[](/MLB)'
-            sdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='FLASH_1200K_640X360'),None)
+            sdLink = next((v.get('url') for v in x.get('playbacks',{}) if v.get('name')=='FLASH_1200K_640X360'),None)
             if not sdLink: sdLink = ""
             else: sdLink = "[SD]("+sdLink+")"
-            hdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='FLASH_2500K_1280X720'),None)
-            if not hdLink: hdLink = next((v.get('url') for v in x.get('playbacks') if v.get('name')=='mp4Avc'),None)
+            hdLink = next((v.get('url') for v in x.get('playbacks',{}) if v.get('name')=='FLASH_2500K_1280X720'),None)
+            if not hdLink: hdLink = next((v.get('url') for v in x.get('playbacks',{}) if v.get('name')=='mp4Avc'),None)
             if not hdLink: hdLink = ""
             else: hdLink = "[HD]("+hdLink+")"
             highlights += "|" + subLink + "|" + x.get('headline') + " (" + x.get('duration') + ")|" + sdLink + " " + hdLink + "|\n"

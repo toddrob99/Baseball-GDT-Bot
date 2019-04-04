@@ -989,19 +989,19 @@ class Editor:
             currentPlay = gameLive.get('liveData').get('plays').get('currentPlay')
             offense = gameLive.get('liveData').get('linescore').get('offense')
             defense = gameLive.get('liveData').get('linescore').get('defense')
-            outs = str(currentPlay.get('count').get('outs','0'))
+            outs = str(currentPlay.get('count',{}).get('outs','0'))
             if outs == '3':
                 if gameLive.get('liveData').get('linescore').get('inningHalf') == 'Top': current_state = current_state.replace('Top','Middle')
                 elif gameLive.get('liveData').get('linescore').get('inningHalf') == 'Bottom': current_state = current_state.replace('Bottom','End')
                 if current_state == 'Middle of the 7th': current_state = "Seventh inning stretch"
 
-                dueup = offense.get('batter').get('fullName')
+                dueup = offense.get('batter',{}).get('fullName','*Unknown*')
                 comingup = " with " + dueup
 
-                ondeck = offense.get('onDeck').get('fullName')
+                ondeck = offense.get('onDeck',{}).get('fullName','*Unknown*')
                 comingup += ", " + ondeck
 
-                inhole = offense.get('inHole').get('fullName')
+                inhole = offense.get('inHole',{}).get('fullName','*Unknown*')
                 comingup += ", and " + inhole
 
                 teamcomingup = self.lookup_team_info('name','team_id',str(offense.get('team').get('id')))
@@ -1024,19 +1024,17 @@ class Editor:
                 outtext = " out" if outs=='1' else " outs"
                 current_state += ", " + outs + outtext
 
-                count = str(currentPlay.get('count').get('balls','0')) + "-" + str(currentPlay.get('count').get('strikes','0'))
+                count = str(currentPlay.get('count',{}).get('balls','0')) + "-" + str(currentPlay.get('count',{}).get('strikes','0'))
                 current_state += ", and a count of " + count
 
-                atbat = currentPlay.get('matchup').get('batter').get('fullName')
-                if not atbat: atbat = "*Unknown*"
+                atbat = currentPlay.get('matchup',{}).get('batter',{}).get('fullName','*Unknown*')
                 current_state += " with " + atbat + " batting"
 
-                onthemound = currentPlay.get('matchup').get('pitcher').get('fullName')
-                if not onthemound: onthemound = "*Unknown*"
+                onthemound = currentPlay.get('matchup',{}).get('pitcher',{}).get('fullName','*Unknown*')
                 current_state += " and " + onthemound + " pitching."
 
-                ondeck = offense.get('onDeck').get('fullName')
-                inthehole = offense.get('inHole').get('fullName')
+                ondeck = offense.get('onDeck',{}).get('fullName')
+                inthehole = offense.get('inHole',{}).get('fullName')
                 if ondeck:
                     current_state += " " + ondeck + " is on deck"
                     if inthehole: current_state += ", and " + inthehole + " is in the hole."    

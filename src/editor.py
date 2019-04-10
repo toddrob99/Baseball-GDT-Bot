@@ -23,7 +23,7 @@ class Editor:
         self.SETTINGS = settings
         self.TEAMINFO = {}
 
-    def api_download(self,link,critical=True,sleepTime=10,forceDownload=False,localWait=4,apiVer=None):
+    def api_download(self,link,critical=True,sleepTime=10,forceDownload=False,localWait=4,apiVer=None,timeout=120):
         usecache=False
         if not link:
             logging.error("No link provided to download. Returning empty dict...")
@@ -45,7 +45,7 @@ class Editor:
                 logging.debug("Downloading %s from MLB API...",link)
             while True:
                 try:
-                    api_response = urllib2.urlopen(self.SETTINGS.get('STATSAPI_URL') + link)
+                    api_response = urllib2.urlopen(self.SETTINGS.get('STATSAPI_URL') + link,timeout=timeout)
                     self.gamesLive.update({link : json.load(api_response)})
                     self.gamesLive[link].update({'localTimestamp' : datetime.utcnow(),'localWait' : localWait})
                     break

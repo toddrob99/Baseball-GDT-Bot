@@ -48,6 +48,7 @@ class Editor:
                     api_response = urllib2.urlopen(self.SETTINGS.get('STATSAPI_URL') + link,timeout=timeout)
                     self.gamesLive.update({link : json.load(api_response)})
                     self.gamesLive[link].update({'localTimestamp' : datetime.utcnow(),'localWait' : localWait})
+                    logging.debug("Finished downloading %s from MLB API...",link)
                     break
                 except urllib2.HTTPError, e:
                     if critical:

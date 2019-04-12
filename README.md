@@ -230,6 +230,7 @@ Modules being used:
 #### v5.1.9
 * Updated live game API to v1.1 in order to address #77 (v1 not updating with live game data)
 * Improved logging when bot crashes
+* Updated Cleveland Indians sub to r/ClevelandIndians
 
 #### v5.1.8
 * Added support for weekly threads, which can be enabled all year or only for offseason, and which will be posted around Midnight (bot local time) on the configured day. Configure with the new `WEEKLY_THREADS` section. See `README.md` for descriptions of the settings and `sample_settings.json` for examples.

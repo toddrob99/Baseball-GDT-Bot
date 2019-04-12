@@ -1414,7 +1414,7 @@ class Editor:
                         "145": "/r/WhiteSox",
                         "116": "/r/MotorCityKitties",
                         "118": "/r/KCRoyals",
-                        "114": "/r/WahoosTipi",
+                        "114": "/r/ClevelandIndians",
                         "140": "/r/TexasRangers",
                         "117": "/r/Astros",
                         "133": "/r/OaklandAthletics",

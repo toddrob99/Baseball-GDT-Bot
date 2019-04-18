@@ -65,3 +65,4 @@ class Logger(object):
         self.warn = self.logger.warn
         self.error = self.logger.error
         self.critical = self.logger.critical
+        self.exception = self.logger.exception

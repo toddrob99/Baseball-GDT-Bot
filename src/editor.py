@@ -803,7 +803,7 @@ class Editor:
             return {'id':0, 'actions':[], 'pitches':[]}
         id=gameAllPlays[-1].get('about',{}).get('atBatIndex',0)
         action=gameAllPlays[-1].get('actions',[])
-        pitch=gameAllPlays[-1].get('pitches',[])
+        pitch=gameAllPlays[-1].get('pitchIndex',[])
         logging.debug("Returning latest atBatIndex, id:%s, actions:%s, pitches:%s...",id,action,pitch)
         return {'id':id, 'actions':action, 'pitches':pitch}
     
@@ -819,13 +819,15 @@ class Editor:
         for play in newPlays:
             if not self.gamesComments.get(play.get('about').get('atBatIndex')): self.gamesComments.update({play.get('about').get('atBatIndex') : []})
             battingTeam = 'myTeam' if (play.get('about').get('halfInning') == 'bottom' and self.games[gameid].get('homeaway') == 'home') or (play.get('about').get('halfInning') == 'top' and self.games[gameid].get('homeaway') == 'away') else 'oppTeam'
-            logging.debug("play atBatIndex %s (isComplete: %s, actions: %s, pitches: %s) - %s %s - %s batting: Type: %s, Event: %s, Description: %s",play.get('about').get('atBatIndex'),play.get('about').get('isComplete'),play.get('actions'),play.get('pitches'),play.get('about').get('halfInning'),play.get('about').get('inning'),battingTeam,play.get('result').get('type'),play.get('result').get('event'),play.get('result').get('description'))
-            for i in play.get('actions',[]):
+            logging.debug("play atBatIndex %s (isComplete: %s, actions: %s, pitches: %s) - %s %s - %s batting - Type: %s, Event: %s, Description: %s",play.get('about').get('atBatIndex'),play.get('about').get('isComplete'),play.get('actionIndex'),play.get('pitchIndex'),play.get('about').get('halfInning'),play.get('about').get('inning'),battingTeam,play.get('result').get('type'),play.get('result').get('event'),play.get('result').get('description'))
+            for i in play.get('actionIndex',[]):
                 event = play.get('playEvents')[i]
                 if (event.get('isPitch') and i not in self.games[gameid].get('atBatIndex',{}).get('pitches')) or (not event.get('isPitch') and i not in self.games[gameid].get('atBatIndex',{}).get('actions')):
                     if i not in self.games[gameid]['atBatIndex']['actions'] \
                       and ((battingTeam =='myTeam' and event.get('details').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
-                      or (battingTeam =='oppTeam' and event.get('details').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
+                      or (battingTeam =='oppTeam' and event.get('details').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))
+                      or (battingTeam =='myTeam' and 'All' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS'))
+                      or (battingTeam =='OppTeam' and 'All' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
                         if {event.get('details').get('event','') : event.get('details').get('description')} not in self.gamesComments.get(play.get('about').get('atBatIndex')):
                             notablePlays.append({'battingTeam':battingTeam, 'type':'event', 'event':event, 'about':play.get('about')})
                             self.gamesComments[play.get('about').get('atBatIndex')].append({event.get('details').get('event','') : event.get('details').get('description')})
@@ -836,13 +838,15 @@ class Editor:
               and ((battingTeam =='myTeam' and play.get('result').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
               or (battingTeam =='oppTeam' and play.get('result').get('event','') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS')) \
               or (battingTeam =='myTeam' and play.get('about').get('isScoringPlay') and 'Scoring Play' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS')) \
-              or (battingTeam =='oppTeam' and play.get('about').get('isScoringPlay') and 'Scoring Play' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
+              or (battingTeam =='oppTeam' and play.get('about').get('isScoringPlay') and 'Scoring Play' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))
+              or (battingTeam =='myTeam' and 'All' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_BATTING').get('EVENTS'))
+              or (battingTeam =='OppTeam' and 'All' in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('EVENTS'))):
                 if {play.get('result').get('event','') : play.get('result').get('description')} not in self.gamesComments.get(play.get('about').get('atBatIndex')):
                     notablePlays.append({'battingTeam':battingTeam, 'type':'play', 'play':play, 'about':play.get('about')})
                     self.gamesComments[play.get('about').get('atBatIndex')].append({play.get('result').get('event','') : play.get('result').get('description')})
                 else:
                     logging.debug("Result event %s for atBatIndex %s already commented.", play.get('result').get('event',''), play.get('about').get('atBatIndex'))
-            self.games[gameid]['atBatIndex'].update({'id':play.get('about').get('atBatIndex'), 'actions':play.get('actions'), 'pitches':play.get('pitches',0)})
+            self.games[gameid]['atBatIndex'].update({'id':play.get('about').get('atBatIndex'), 'actions':play.get('actionIndex'), 'pitches':play.get('pitchIndex',[])})
             #logging.debug("gamesComments for atBatIndex %s: %s.", play.get('about').get('atBatIndex'), self.gamesComments.get(play.get('about').get('atBatIndex')))
         logging.debug("atBatIndex for Game %s: %s", gameid, self.games[gameid]['atBatIndex'])
         return notablePlays
@@ -899,25 +903,28 @@ class Editor:
 
                 comment_text += play.get('play').get('result').get('description')
 
-                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('PITCH_STATS') and len(play.get('play').get('pitches',[])):
-                    #get pitch stats
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('PITCH_STATS') and len(play.get('play').get('pitchIndex',[])):
+                    #logging.debug("Getting pitch stats for play: %s...",play) #debug
                     try:
-                        pitchType = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('details',{}).get('displayName','unknown')
-                        startSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('startSpeed','-')
-                        endSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('endSpeed','-')
-                        nastyFactor = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('stats',{}).get('nastyFactor','-')
-                        comment_text += "\n\nPitch Type: " + pitchType + "\n\nStart Speed: " + startSpeed + "\n\nEnd Speed: " + endSpeed + "\n\nNasty Factor: " + nastyFactor
-                    except:
-                        logging.error("Error adding pitch stats to notable play comment (ID: %s, Type: %s, Event: %s).", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'))
-                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('HIT_STATS') and len(play.get('play').get('pitches',[])):
-                    #get hit stats
+                        pitchType = play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('details',{}).get('type',{}).get('description','unknown')
+                        startSpeed = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('pitchData',{}).get('startSpeed','-'))
+                        endSpeed = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('pitchData',{}).get('endSpeed','-'))
+                        nastyFactor = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('stats',{}).get('nastyFactor','-'))
+                        comment_text += "\n\nPitch Type: " + pitchType + "\n\nStart Speed: " + startSpeed + "\n\nEnd Speed: " + endSpeed
+                        if nastyFactor != '-': comment_text += "\n\nNasty Factor: " + nastyFactor #nastyFactor is missing from MLB data, so exclude if missing
+                    except Exception,e:
+                        logging.error("Error adding pitch stats to notable play comment (ID: %s, Type: %s, Event: %s): %s.", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'), e)
+                        #logging.debug("Play from previous error: %s",play) #debug
+                if play.get('play').get('result').get('event') in self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('HIT_STATS') and len(play.get('play').get('pitchIndex',[])):
+                    #logging.debug("getting hit stats for play %s...",play) #debug
                     try:
-                        launchSpeed = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('launchSpeed','unknown')
-                        launchAngle = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('launchAngle','unknown')
-                        totalDistance = play.get('play').get('playEvents')[play.get('play').get('pitches')[-1]].get('hitData',{}).get('totalDistance','unknown')
+                        launchSpeed = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('hitData',{}).get('launchSpeed','unknown'))
+                        launchAngle = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('hitData',{}).get('launchAngle','unknown'))
+                        totalDistance = str(play.get('play').get('playEvents')[play.get('play').get('pitchIndex')[-1]].get('hitData',{}).get('totalDistance','unknown'))
                         comment_text += "\n\nLaunch Speed: " + launchSpeed + "\n\nLaunch Angle: " + launchAngle + "\n\nTotal Distance: " + totalDistance
-                    except:
-                        logging.error("Error adding hit stats to notable play comment (ID: %s, Type: %s, Event: %s).", play.get('play').get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'))
+                    except Exception,e:
+                        logging.error("Error adding hit stats to notable play comment (ID: %s, Type: %s, Event: %s): %s.", play.get('about').get('atBatIndex'), play.get('type'), play.get('play').get('result').get('event'), e)
+                        #logging.debug("Play from previous error: %s",play) #debug
 
                 if play.get('battingTeam','')=='oppTeam' and self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('play').get('result').get('event')):
                     comment_text += "\n\n" + self.replace_params(str(self.SETTINGS.get('GAME_THREAD').get('NOTABLE_PLAY_COMMENTS').get('MYTEAM_PITCHING').get('FOOTER').get(play.get('play').get('result').get('event'))).replace('{halfInning}',play.get('about').get('halfInning')[0].upper()+play.get('about').get('halfInning')[1:]).replace('{inning}',str(play.get('about').get('inning'))),'notable_play','comment',gameid)

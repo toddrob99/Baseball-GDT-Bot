@@ -992,11 +992,14 @@ class Editor:
         detailedState = self.games[gameid].get('status').get('detailedState')
         abstractGameState = self.games[gameid].get('status').get('abstractGameState')
         if abstractGameState == 'Live' and detailedState == 'In Progress':
-            current_state += gameLive.get('liveData').get('linescore').get('inningHalf') + " of the " + gameLive.get('liveData').get('linescore').get('currentInningOrdinal')
+            current_state += gameLive.get('liveData').get('linescore').get('inningHalf','') + " of the " + gameLive.get('liveData').get('linescore').get('currentInningOrdinal','')
+            if current_state == " of the ":
+                logging.debug("Returning current_state (none--missing inning data)...")
+                return ""
 
-            currentPlay = gameLive.get('liveData').get('plays').get('currentPlay')
-            offense = gameLive.get('liveData').get('linescore').get('offense')
-            defense = gameLive.get('liveData').get('linescore').get('defense')
+            currentPlay = gameLive.get('liveData').get('plays').get('currentPlay',{})
+            offense = gameLive.get('liveData').get('linescore').get('offense',{})
+            defense = gameLive.get('liveData').get('linescore').get('defense',{})
             outs = str(currentPlay.get('count',{}).get('outs','0'))
             if outs == '3':
                 if gameLive.get('liveData').get('linescore').get('inningHalf') == 'Top': current_state = current_state.replace('Top','Middle')

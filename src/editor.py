@@ -1056,7 +1056,10 @@ class Editor:
                 else:
                     current_state += "###Game Status: " + detailedState + " due to " + self.games[gameid].get('status').get('reason')
             else:
-                current_state += "###Game Status: " + detailedState + " due to unspecified reason"
+                if detailedState.find(':') != -1:
+                    current_state += "###Game Status: " + detailedState
+                else:
+                    current_state += "###Game Status: " + detailedState + " due to unspecified reason"
         elif detailedState.startswith('Warmup') or detailedState.lower().startswith('manager challenge') or detailedState.lower().startswith('instant replay') or detailedState.lower().startswith('umpire review'):
             if self.games[gameid].get('status').get('reason'):
                 if detailedState.find(self.games[gameid].get('status').get('reason')) != -1:

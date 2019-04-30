@@ -965,7 +965,7 @@ class Editor:
         for x in sorted(unorderedHighlights):
             sortedHighlights.append(unorderedHighlights[x])
         for x in sortedHighlights:
-            team = next((v.get('value') for v in x.get('keywordsDisplay',{}) if v.get('type')=='team_id'),None)
+            team = next((v.get('value') for v in x.get('keywordsAll',{}) if v.get('type')=='team_id'),None)
             if not team: subLink='[](/MLB)'
             else: subLink = self.lookup_team_info('sublink','team_id',team)
             if subLink == "": subLink='[](/MLB)'

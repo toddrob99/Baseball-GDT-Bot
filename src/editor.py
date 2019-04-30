@@ -965,7 +965,7 @@ class Editor:
         for x in sorted(unorderedHighlights):
             sortedHighlights.append(unorderedHighlights[x])
         for x in sortedHighlights:
-            team = next((v.get('value') for v in x.get('keywordsDisplay',{}) if v.get('type')=='team_id'),None)
+            team = next((v.get('value') for v in x.get('keywordsAll',{}) if v.get('type')=='team_id'),None)
             if not team: subLink='[](/MLB)'
             else: subLink = self.lookup_team_info('sublink','team_id',team)
             if subLink == "": subLink='[](/MLB)'
@@ -992,11 +992,14 @@ class Editor:
         detailedState = self.games[gameid].get('status').get('detailedState')
         abstractGameState = self.games[gameid].get('status').get('abstractGameState')
         if abstractGameState == 'Live' and detailedState == 'In Progress':
-            current_state += gameLive.get('liveData').get('linescore').get('inningHalf') + " of the " + gameLive.get('liveData').get('linescore').get('currentInningOrdinal')
+            current_state += gameLive.get('liveData').get('linescore').get('inningHalf','') + " of the " + gameLive.get('liveData').get('linescore').get('currentInningOrdinal','')
+            if current_state == " of the ":
+                logging.debug("Returning current_state (none--missing inning data)...")
+                return ""
 
-            currentPlay = gameLive.get('liveData').get('plays').get('currentPlay')
-            offense = gameLive.get('liveData').get('linescore').get('offense')
-            defense = gameLive.get('liveData').get('linescore').get('defense')
+            currentPlay = gameLive.get('liveData').get('plays').get('currentPlay',{})
+            offense = gameLive.get('liveData').get('linescore').get('offense',{})
+            defense = gameLive.get('liveData').get('linescore').get('defense',{})
             outs = str(currentPlay.get('count',{}).get('outs','0'))
             if outs == '3':
                 if gameLive.get('liveData').get('linescore').get('inningHalf') == 'Top': current_state = current_state.replace('Top','Middle')
@@ -1053,7 +1056,10 @@ class Editor:
                 else:
                     current_state += "###Game Status: " + detailedState + " due to " + self.games[gameid].get('status').get('reason')
             else:
-                current_state += "###Game Status: " + detailedState + " due to unspecified reason"
+                if detailedState.find(':') != -1:
+                    current_state += "###Game Status: " + detailedState
+                else:
+                    current_state += "###Game Status: " + detailedState + " due to unspecified reason"
         elif detailedState.startswith('Warmup') or detailedState.lower().startswith('manager challenge') or detailedState.lower().startswith('instant replay') or detailedState.lower().startswith('umpire review'):
             if self.games[gameid].get('status').get('reason'):
                 if detailedState.find(self.games[gameid].get('status').get('reason')) != -1:

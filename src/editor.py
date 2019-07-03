@@ -736,9 +736,9 @@ class Editor:
             for i in range(x, numInnings+1):
                 linescore += "|"
         awayLob = str(gameLinescore.get('teams',{}).get('away',{}).get('leftOnBase',0))
-        awayRuns = str(gameLinescore.get('teams').get('away').get('runs', gameLinescore.get('away',{}).get('runs',0)))
-        awayHits = str(gameLinescore.get('teams').get('away').get('hits', gameLinescore.get('away',{}).get('hits',0)))
-        awayErrors = str(gameLinescore.get('teams').get('away').get('errors', gameLinescore.get('away',{}).get('errors',0)))
+        awayRuns = str(gameLinescore.get('teams',{}).get('away',{}).get('runs', gameLinescore.get('away',{}).get('runs',0)))
+        awayHits = str(gameLinescore.get('teams',{}).get('away',{}).get('hits', gameLinescore.get('away',{}).get('hits',0)))
+        awayErrors = str(gameLinescore.get('teams',{}).get('away',{}).get('errors', gameLinescore.get('away',{}).get('errors',0)))
         linescore += "|" + awayRuns + "|" + awayHits + "|" + awayErrors + "|" + awayLob
         linescore += "\n" + homeSubLink + "|"
         x=1
@@ -752,9 +752,9 @@ class Editor:
             for i in range(x, numInnings+1):
                 linescore += "|"
         homeLob = str(gameLinescore.get('teams',{}).get('home',{}).get('leftOnBase',0))
-        homeRuns = str(gameLinescore.get('teams').get('home').get('runs', gameLinescore.get('home',{}).get('runs',0)))
-        homeHits = str(gameLinescore.get('teams').get('home').get('hits', gameLinescore.get('home',{}).get('hits',0)))
-        homeErrors = str(gameLinescore.get('teams').get('home').get('errors', gameLinescore.get('home',{}).get('errors',0)))
+        homeRuns = str(gameLinescore.get('teams',{}).get('home',{}).get('runs', gameLinescore.get('home',{}).get('runs',0)))
+        homeHits = str(gameLinescore.get('teams',{}).get('home',{}).get('hits', gameLinescore.get('home',{}).get('hits',0)))
+        homeErrors = str(gameLinescore.get('teams',{}).get('home',{}).get('errors', gameLinescore.get('home',{}).get('errors',0)))
         linescore += "|" + homeRuns + "|" + homeHits + "|" + homeErrors + "|" + homeLob
         logging.debug("Returning linescore...")
         return linescore + "\n"

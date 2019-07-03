@@ -35,7 +35,7 @@ from config import Config
 class Bot:
 
     def __init__(self, settings_file):
-        self.VERSION = '5.1.9'
+        self.VERSION = '5.2.1'
         self.games = games.Games().games
         self.editStats = {}
         self.editStatHistory = []
@@ -803,7 +803,8 @@ class Bot:
                                         if notablePlayComment != "":
                                             logger.info("Submitting notable play comment...")
                                             try:
-                                                game.get('gamesub').reply(notablePlayComment)
+                                                replyObject = game.get('gamesub').reply(notablePlayComment)
+                                                if not conf.SETTINGS.get('GAME_THREAD').get('INBOX_REPLIES'): replyObject.disable_inbox_replies()
                                                 logger.info("Notable play comment submitted...")
                                                 self.editStats[k]['commented'].append(notablePlayCounts)
                                             except:

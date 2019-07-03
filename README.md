@@ -10,6 +10,10 @@ https://github.com/mattabullock/Baseball-GDT-Bot
 	
 This project contains a bot to post off day, pregame, game, and postgame discussion threads on Reddit for a given MLB team, and keep those threads updated with game data while games are in progress. This fork is written in Python 2.7, using PRAW 5 to interface with the Reddit API and the MLB Stats API for MLB data.
 
+## IMPORTANT NOTE
+
+This project is in maintenance mode as of May 2019. No new features are being added; only bug fixes will be released from now on. The [redball bot management platform](https://github.com/toddrob99/redball) project will include a replacement. The redball bot management platform will make bots easier to configure and run, offering a web interface for creating, configuring, starting, stopping, and monitoring multiple bots.
+
 ---
 
 ### Setup and Configuration
@@ -226,6 +230,13 @@ Modules being used:
 
 ---
 ### Change Log
+
+#### v5.2.1
+* Fix incorrect home hits in linescore
+
+#### v5.2.0
+* Honor `INBOX_REPLIES` game thread setting for notable play comments
+* Add maintenance mode note to README
 
 #### v5.1.9
 * Updated live game API to v1.1 in order to address #77 (v1 not updating with live game data)
